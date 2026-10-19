@@ -269,10 +269,28 @@ func (ts TmdbService) SyncWatchedToTmdb(userId uint, showId uint, watched bool) 
 	}
 
 	client := tvproviders.TmdbClient{}
+
+	// Guard against overwriting ratings the user set manually on TMDB:
+	// - marking watched only writes 10/10 when the item has no rating yet
+	// - unmarking watched only deletes the 10 we wrote ourselves
+	current, err := client.GetRating(cfg.TmdbSessionId, show.MediaType, mediaId)
+	if err != nil {
+		log.Error().Err(err).Msgf("tmdb: error reading current rating for user %d show %d", userId, showId)
+		return
+	}
+
 	var syncErr error
 	if watched {
+		if current > 0 {
+			log.Info().Msgf("tmdb: show %d already rated %.1f by user %d, keeping it", showId, current, userId)
+			return
+		}
 		syncErr = client.RateItem(cfg.TmdbSessionId, show.MediaType, mediaId, 10)
 	} else {
+		if current > 0 && current != 10 {
+			log.Info().Msgf("tmdb: show %d has manual rating %.1f by user %d, not deleting it", showId, current, userId)
+			return
+		}
 		syncErr = client.DeleteRating(cfg.TmdbSessionId, show.MediaType, mediaId)
 	}
 

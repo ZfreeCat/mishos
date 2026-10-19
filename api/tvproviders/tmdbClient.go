@@ -334,6 +334,21 @@ func (tc TmdbClient) SetWatchlistItem(accountId string, sessionId string, mediaT
 	return nil
 }
 
+// GetRating returns the user's current rating for a movie/tv show (0 if unrated).
+// Used to avoid overwriting ratings the user set manually on TMDB.
+func (tc TmdbClient) GetRating(sessionId string, mediaType string, mediaId int) (float64, error) {
+	params := url.Values{}
+	params.Add("session_id", sessionId)
+
+	body, err := tc.get(fmt.Sprintf("%s/%d/account_states", mediaType, mediaId), &params)
+	if err != nil {
+		return 0, err
+	}
+
+	// unrated => "rated": false; rated => "rated": {"value": 8.0}
+	return gjson.Get(body, "rated.value").Float(), nil
+}
+
 // RateItem rates a movie or tv show (POST /{mediaType}/{id}/rating).
 // Used to mirror the local "watched" state to TMDB (watched = 10/10).
 func (tc TmdbClient) RateItem(sessionId string, mediaType string, mediaId int, score float64) error {
