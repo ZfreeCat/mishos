@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -240,37 +241,54 @@ func (tc TmdbClient) GetWatchlist(accountId string, sessionId string, mediaType 
 
 // GetRated loads the user's rated movies or tv shows (My Ratings).
 func (tc TmdbClient) GetRated(accountId string, sessionId string, mediaType string) ([]TmdbRatedItem, error) {
+	// TMDB v3 uses /account/{id}/rated/movies (plural) - map movie -> movies
+	apiMediaType := mediaType
+	if apiMediaType == TmdbMediaTypeMovie {
+		apiMediaType = "movies"
+	}
+
 	params := url.Values{}
 	params.Add("session_id", sessionId)
 	params.Add("sort_by", "created_at.asc")
 
-	body, err := tc.get(fmt.Sprintf("account/%s/rated/%s", accountId, mediaType), &params)
-	if err != nil {
-		return nil, err
-	}
-
 	results := []TmdbRatedItem{}
-	json := gjson.Parse(body)
+	page := 1
 
-	json.Get("results").ForEach(func(_, value gjson.Result) bool {
-		name := value.Get("name").String()
-		if name == "" {
-			name = value.Get("title").String()
+	for {
+		params.Set("page", strconv.Itoa(page))
+
+		body, err := tc.get(fmt.Sprintf("account/%s/rated/%s", accountId, apiMediaType), &params)
+		if err != nil {
+			return nil, err
 		}
 
-		results = append(results, TmdbRatedItem{
-			ID:           int(value.Get("id").Int()),
-			MediaType:    mediaType,
-			Name:         name,
-			Overview:     value.Get("overview").String(),
-			PosterPath:   value.Get("poster_path").String(),
-			FirstAirDate: value.Get("first_air_date").String(),
-			ReleaseDate:  value.Get("release_date").String(),
-			VoteAverage:  value.Get("vote_average").Float(),
-			Rating:       value.Get("rating").Float(),
+		json := gjson.Parse(body)
+		json.Get("results").ForEach(func(_, value gjson.Result) bool {
+			name := value.Get("name").String()
+			if name == "" {
+				name = value.Get("title").String()
+			}
+
+			results = append(results, TmdbRatedItem{
+				ID:           int(value.Get("id").Int()),
+				MediaType:    mediaType,
+				Name:         name,
+				Overview:     value.Get("overview").String(),
+				PosterPath:   value.Get("poster_path").String(),
+				FirstAirDate: value.Get("first_air_date").String(),
+				ReleaseDate:  value.Get("release_date").String(),
+				VoteAverage:  value.Get("vote_average").Float(),
+				Rating:       value.Get("rating").Float(),
+			})
+			return true
 		})
-		return true
-	})
+
+		totalPages := int(json.Get("total_pages").Int())
+		if page >= totalPages || totalPages == 0 {
+			break
+		}
+		page++
+	}
 
 	return results, nil
 }
