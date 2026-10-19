@@ -43,6 +43,7 @@ export class WatchListRecent extends BaseElement {
   }
 
   private renderEpisode(episode: WatchlistEpisodeDto): TemplateResult | null {
+    const isMovie = episode.showMediaType === 'movie';
     return episode.id
       ? html`
           <div class="episode">
@@ -58,7 +59,11 @@ export class WatchListRecent extends BaseElement {
               <div class="episode-name">${episode.name}</div>
               <div class="episode-summary">${episode.summary}</div>
               <ul class="detail-list">
-                <li>S${episode.seasonNumber} E${episode.number}</li>
+                ${
+                  isMovie
+                    ? html`<li class="movie-badge">Movie</li>`
+                    : html`<li>S${episode.seasonNumber} E${episode.number}</li>`
+                }
                 ${episode.network ? html`<li>${episode.network}</li>` : null}
                 ${episode.aired ? html`<li>${formatAirTime(episode.aired)}</li>` : null}
                 ${episode.runtime ? html`<li>${episode.runtime}m</li>` : null}
@@ -72,6 +77,10 @@ export class WatchListRecent extends BaseElement {
 
   private handleClickShow(event: Event, episode: WatchlistEpisodeDto) {
     event.preventDefault();
+    if (episode.showMediaType === 'movie') {
+      Router.go(`/show/view/${episode.showId}`);
+      return;
+    }
     Router.go(`/show/view/${episode.showId}?season=${episode.seasonNumber}`);
   }
 
@@ -152,6 +161,11 @@ export class WatchListRecent extends BaseElement {
         font-size: var(--sl-font-size-x-small);
         margin-top: var(--sl-spacing-2x-small);
         color: var(--sl-color-neutral-700);
+      }
+
+      .movie-badge {
+        font-weight: var(--sl-font-weight-semibold);
+        color: var(--sl-color-primary-600);
       }
 
       @media screen and (min-width: 640px) {

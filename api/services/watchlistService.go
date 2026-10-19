@@ -105,7 +105,56 @@ func (ws WatchListService) GetUnwatched(userId uint) (*[]modelsdto.WatchlistEpis
 		unwatched[i].ImageMedium = RewriteImageUrl(unwatched[i].ImageMedium)
 	}
 
+	// include movies: followed movies that have not been watched yet.
+	// Movies have no seasons/episodes, so they are rendered as single entries.
+	movies, err := ws.getUnwatchedMovies(userId)
+	if err != nil {
+		return nil, err
+	}
+	unwatched = append(unwatched, movies...)
+
 	return &unwatched, nil
+}
+
+// getUnwatchedMovies returns the user's followed, unwatched movies.
+func (ws WatchListService) getUnwatchedMovies(userId uint) ([]modelsdto.WatchlistEpisodeDto, error) {
+	var movies = []modelsdto.WatchlistEpisodeDto{}
+	err := db.DB.
+		Model(&modelsdb.Show{}).
+		Select(`
+      shows.id as ID,
+      shows.name as Name,
+      shows.summary as Summary,
+      shows.premiered as Aired,
+      shows.runtime as Runtime,
+      shows.id as ShowID,
+      shows.name as ShowName,
+      shows.image_medium as ImageMedium,
+      shows.network as Network
+    `).
+		Joins(`
+      inner join followed_shows on followed_shows.show_id = shows.id
+      left join watched_shows on watched_shows.show_id = shows.id and watched_shows.user_id = ?
+    `, userId).
+		Where(`
+      followed_shows.user_id = ?
+      and shows.media_type = ?
+      and watched_shows.id is null
+    `, userId, "movie").
+		Order("shows.name asc").
+		Scan(&movies).
+		Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range movies {
+		movies[i].ShowMediaType = "movie"
+		movies[i].ImageMedium = RewriteImageUrl(movies[i].ImageMedium)
+	}
+
+	return movies, nil
 }
 
 func (ws WatchListService) GetRecent(userId uint) (*[]modelsdto.WatchlistEpisodeDto, error) {
@@ -159,7 +208,53 @@ func (ws WatchListService) GetRecent(userId uint) (*[]modelsdto.WatchlistEpisode
 		watched[i].ImageMedium = RewriteImageUrl(watched[i].ImageMedium)
 	}
 
+	// include movies in the recently watched list
+	movies, err := ws.getRecentMovies(userId, limit)
+	if err != nil {
+		return nil, err
+	}
+	watched = append(watched, movies...)
+
 	return &watched, nil
+}
+
+// getRecentMovies returns the user's recently watched movies.
+func (ws WatchListService) getRecentMovies(userId uint, limit int) ([]modelsdto.WatchlistEpisodeDto, error) {
+	var movies = []modelsdto.WatchlistEpisodeDto{}
+	err := db.DB.
+		Model(&modelsdb.WatchedShow{}).
+		Select(`
+      watched_shows.watched_at as WatchedAt,
+      shows.id as ID,
+      shows.id as ShowID,
+      shows.name as Name,
+      shows.name as ShowName,
+      shows.image_medium as ImageMedium,
+      shows.network as Network,
+      shows.runtime as Runtime
+    `).
+		Joins(`
+      inner join shows on shows.id = watched_shows.show_id
+    `).
+		Where(`
+      watched_shows.user_id = ?
+      and shows.media_type = ?
+    `, userId, "movie").
+		Order("watched_shows.watched_at desc").
+		Limit(limit).
+		Scan(&movies).
+		Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range movies {
+		movies[i].ShowMediaType = "movie"
+		movies[i].ImageMedium = RewriteImageUrl(movies[i].ImageMedium)
+	}
+
+	return movies, nil
 }
 
 func (ws WatchListService) GetUpcoming(userId uint) (*[]modelsdto.WatchlistEpisodeDto, error) {

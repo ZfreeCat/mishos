@@ -16,4 +16,7 @@ type WatchlistEpisodeDto struct {
 	SeasonNumber   uint       `json:"seasonNumber"`
 	WatchedAt      *time.Time `json:"watchedAt"`
 	UnwatchedCount uint       `json:"unwatchedCount"`
+	// ShowMediaType is "tv" for regular shows/episodes and "movie" for movie
+	// entries rendered in the watchlist (movies have no seasons/episodes).
+	ShowMediaType string `json:"showMediaType"`
 }

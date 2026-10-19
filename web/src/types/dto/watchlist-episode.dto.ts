@@ -12,4 +12,5 @@ export interface WatchlistEpisodeDto {
   seasonNumber: number;
   watchedAt?: Date;
   unwatchedCount?: number;
+  showMediaType?: 'tv' | 'movie';
 }

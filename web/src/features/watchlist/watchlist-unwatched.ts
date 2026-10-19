@@ -5,7 +5,7 @@ import { keyed } from 'lit/directives/keyed.js';
 import { when } from 'lit/directives/when.js';
 
 import { BaseElement } from '@/components/base-element';
-import { watchEpisode } from '@/features/shows/shows-api';
+import { watchEpisode, watchShow } from '@/features/shows/shows-api';
 import { sharedStyles } from '@/styles/shared-styles';
 import type { WatchlistEpisodeDto } from '@/types';
 import { createToastEvent, formatAirTime } from '@/utils';
@@ -44,6 +44,7 @@ export class WatchListUnwatched extends BaseElement {
   }
 
   private renderEpisode(episode: WatchlistEpisodeDto, hideSpoilers = false): TemplateResult | null {
+    const isMovie = episode.showMediaType === 'movie';
     return episode
       ? html`
           <div class="episode">
@@ -66,7 +67,11 @@ export class WatchListUnwatched extends BaseElement {
                 () => nothing
               )}
               <ul class="detail-list">
-                <li>S${episode.seasonNumber} E${episode.number}</li>
+                ${
+                  isMovie
+                    ? html`<li class="movie-badge">Movie</li>`
+                    : html`<li>S${episode.seasonNumber} E${episode.number}</li>`
+                }
                 ${episode.network ? html`<li>${episode.network}</li>` : null}
                 ${episode.aired ? html`<li>${formatAirTime(episode.aired)}</li>` : null}
                 ${episode.runtime ? html`<li>${episode.runtime}m</li>` : null}
@@ -89,13 +94,20 @@ export class WatchListUnwatched extends BaseElement {
 
   private handleClickShow(event: Event, episode: WatchlistEpisodeDto) {
     event.preventDefault();
+    if (episode.showMediaType === 'movie') {
+      Router.go(`/show/view/${episode.showId}`);
+      return;
+    }
     Router.go(`/show/view/${episode.showId}?season=${episode.seasonNumber}`);
   }
 
   async handleWatch(episode: WatchlistEpisodeDto) {
     if (episode && episode.id) {
-      const episodeId = episode.id;
-      await this.callApi(() => watchEpisode(episodeId, true));
+      if (episode.showMediaType === 'movie') {
+        await this.callApi(() => watchShow(episode.showId));
+      } else {
+        await this.callApi(() => watchEpisode(episode.id, true));
+      }
       this.episodes = await this.callApi(() => getWatchList());
       this.dispatchEvent(
         createToastEvent({
@@ -167,6 +179,11 @@ export class WatchListUnwatched extends BaseElement {
 
       .watched-button {
         margin-top: var(--sl-spacing-x-small);
+      }
+
+      .movie-badge {
+        font-weight: var(--sl-font-weight-semibold);
+        color: var(--sl-color-primary-600);
       }
 
       @media screen and (min-width: 640px) {

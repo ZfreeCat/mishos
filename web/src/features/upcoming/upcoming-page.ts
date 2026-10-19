@@ -11,14 +11,17 @@ import { formatDate } from '@/utils';
 import { getUpcomingList } from './upcoming-api';
 
 import '@/components/spoiler-message';
+import '@/components/header-button';
 import '@/features/shows/shows-search-form';
 import '@/layout/app-layout';
 
 import './calendar-card';
+import './upcoming-calendar';
 
 @customElement('upcoming-page')
 export class UpcomingPage extends BaseElement {
   @state() episodes?: WatchlistEpisodeDto[];
+  @state() view: 'list' | 'calendar' = 'list';
 
   render() {
     const hideSpoilers = this.appStore?.initData?.userConfig?.hideSpoilers;
@@ -26,18 +29,42 @@ export class UpcomingPage extends BaseElement {
     return html`
       <app-layout icon="calendar-days" headerTitle="Upcoming" selected="upcoming">
         <shows-search-form slot="header"></shows-search-form>
+        <ul class="view-tabs" slot="header">
+          <li>
+            <header-button
+              ?active=${this.view === 'list'}
+              @click=${() => {
+                this.view = 'list';
+              }}
+            >
+              List
+            </header-button>
+          </li>
+          <li>
+            <header-button
+              ?active=${this.view === 'calendar'}
+              @click=${() => {
+                this.view = 'calendar';
+              }}
+            >
+              Calendar
+            </header-button>
+          </li>
+        </ul>
         <section class="content">
           ${
             this.episodes
-              ? this.episodes.length > 0
-                ? html`
-                  <ul class="episode-list">
-                    ${this.episodes.map(episode => {
-                      return html`<li>${this.renderEpisode(episode, hideSpoilers)}</li>`;
-                    })}
-                  </ul>
-                `
-                : html`<div class="noupcoming">No upcoming episodes</div>`
+              ? this.view === 'calendar'
+                ? html`<upcoming-calendar .episodes=${this.episodes}></upcoming-calendar>`
+                : this.episodes.length > 0
+                  ? html`
+                      <ul class="episode-list">
+                        ${this.episodes.map(episode => {
+                          return html`<li>${this.renderEpisode(episode, hideSpoilers)}</li>`;
+                        })}
+                      </ul>
+                    `
+                  : html`<div class="noupcoming">No upcoming episodes</div>`
               : null
           }
         </section>
@@ -99,6 +126,14 @@ export class UpcomingPage extends BaseElement {
     css`
       .content {
         margin: var(--sl-spacing-large);
+      }
+
+      .view-tabs {
+        display: flex;
+        gap: var(--sl-spacing-2x-small);
+        list-style: none;
+        margin: 0;
+        padding: 0;
       }
 
       .episode-list {
