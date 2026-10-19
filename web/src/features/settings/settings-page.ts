@@ -19,6 +19,7 @@ import '@shoelace-style/shoelace/dist/components/select/select.js';
 import './settings-account';
 import './settings-data';
 import './settings-general';
+import './settings-tmdb';
 import './settings-users';
 
 @customElement('settings-page')
@@ -61,6 +62,16 @@ export class SettingsPage extends BaseElement {
               Data
             </header-button>
           </li>
+          <li>
+            <header-button
+              ?active=${this.section === 'tmdb'}
+              @click=${() => {
+                this.section = 'tmdb';
+              }}
+            >
+              TMDB
+            </header-button>
+          </li>
           ${when(
             this.isAdmin(),
             () => html`
@@ -83,6 +94,7 @@ export class SettingsPage extends BaseElement {
             ['general', () => html`<settings-general></settings-general>`],
             ['account', () => html`<settings-account></settings-account>`],
             ['data', () => html`<settings-data></settings-data>`],
+            ['tmdb', () => html`<settings-tmdb></settings-tmdb>`],
             ['users', () => (this.isAdmin() ? html`<settings-users></settings-users>` : nothing)],
           ])}
         </section>

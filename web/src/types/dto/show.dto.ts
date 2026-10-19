@@ -3,6 +3,7 @@ import type { SeasonDto } from './season.dto';
 export interface ShowDto {
   id?: string;
   providerId?: string;
+  providerType?: string;
   name?: string;
   providerUrl?: string;
   summary?: string;
@@ -18,6 +19,8 @@ export interface ShowDto {
   imdbId?: string;
   createdAt?: Date;
   added?: boolean;
+  mediaType?: string;
+  showWatched?: boolean;
   seasons?: SeasonDto[];
   // added for client side only
   following?: boolean;

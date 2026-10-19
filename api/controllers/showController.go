@@ -118,8 +118,7 @@ func (sc ShowController) UpdateShow(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{"message": "show refreshed"})
 }
 
-func (sc ShowController) Follow(context *gin.Context) {
-	user, err := services.GetUserFromContext(context)
+func (sc ShowController) Follow(context *gin.Context) {	user, err := services.GetUserFromContext(context)
 	if err != nil {
 		context.AbortWithStatusJSON(http.StatusUnauthorized, modelsdto.ErrorDto{Error: err.Error()})
 		return
@@ -228,4 +227,63 @@ func (sc ShowController) Preview(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, gin.H{"show": show})
+}
+
+// WatchShow marks an entire show (movie) as watched.
+func (sc ShowController) WatchShow(context *gin.Context) {
+	user, err := services.GetUserFromContext(context)
+	if err != nil {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, modelsdto.ErrorDto{Error: err.Error()})
+		return
+	}
+
+	var body struct {
+		ShowID uint `json:"showId" binding:"required"`
+	}
+
+	if context.BindJSON(&body) != nil {
+		services.SendError(context, "bad request")
+		return
+	}
+
+	watchedShowService := services.WatchedShowService{}
+
+	watched, err := watchedShowService.WatchShow(user.ID, body.ShowID)
+	if err != nil {
+		services.SendError(context, err.Error())
+		return
+	}
+
+	if watched {
+		context.JSON(http.StatusOK, gin.H{"watched": watched, "message": "show watched"})
+	} else {
+		context.JSON(http.StatusOK, gin.H{"watched": watched, "message": "show already watched"})
+	}
+}
+
+// UnwatchShow unmarks an entire show (movie) as watched.
+func (sc ShowController) UnwatchShow(context *gin.Context) {
+	user, err := services.GetUserFromContext(context)
+	if err != nil {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, modelsdto.ErrorDto{Error: err.Error()})
+		return
+	}
+
+	var body struct {
+		ShowID uint `json:"showId" binding:"required"`
+	}
+
+	if context.BindJSON(&body) != nil {
+		services.SendError(context, "bad request")
+		return
+	}
+
+	watchedShowService := services.WatchedShowService{}
+
+	if err := watchedShowService.UnwatchShow(user.ID, body.ShowID); err != nil {
+		services.SendError(context, err.Error())
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H{"message": "show unwatched"})
 }

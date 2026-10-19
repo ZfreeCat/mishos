@@ -49,8 +49,26 @@ Here are some other important environment variables:
 - `SECRET` - Set this to whatever you want but definitely set it to something.  This is the signing key used for authentication.
 - `WATCHLIST_RECENT_LIMIT` - This is how many episodes to show on the recently watched tab.
 - `CRON_PROVIDER_UPDATE` - This is a cron string that defines the interval to get show updates from the provider.  If unset it defaults to 12 AM.
-- `RUN_MIGRATION` - This should be set to `1` for the **first run of the app** only.  This instructs the backend to initialize the empty database.
+- `RUN_MIGRATION` - This should be set to `1` for the **first run of the app** only.  This instructs the backend to initialize the empty database. **Set it to `1` again after upgrading to pull in the new tables/columns.**
 - `TOKEN_DURATION` - This is the number of days the authentication token is valid.
+
+**TMDB**
+
+- `TMDB_API_KEY` - Your TMDB API key (https://www.themoviedb.org/settings/api). Required for the TMDB watchlist sync and the Discover (recommendations) feature.
+- `TMDB_API_URL` - Defaults to `https://api.themoviedb.org/3`. If your host cannot reach api.themoviedb.org directly (e.g. mainland China), point this at a reverse proxy / mirror.
+- `TMDB_IMAGE_URL` - Defaults to `https://image.tmdb.org/t/p`. Same reachability caveat as above.
+
+**Local image cache**
+
+TVmaze and TMDB image CDNs are unreachable from mainland China, so images are downloaded into a local cache and served from `/api/images/...`:
+
+- `IMAGE_CACHE_DIR` - Directory where cached images are stored. Defaults to `./data/images`. In Docker, map a volume here (e.g. `IMAGE_CACHE_DIR=/images` and a `- /your/path:/images` volume) so the cache survives container rebuilds.
+- `IMAGE_ALLOWED_DOMAINS` - Comma-separated extra domains allowed for image downloads (defaults to `tvmaze.com` and `tmdb.org`).
+- `CRON_IMAGE_PREFETCH` - Cron string to prefetch all followed show images. Defaults to 4 AM.
+
+**TMDB watchlist sync**
+
+- `CRON_TMDB_SYNC` - Cron string to automatically sync every connected user's TMDB watchlist. Defaults to 3 AM. Users can also sync manually from Settings -> TMDB.
 
 ## First Run
 

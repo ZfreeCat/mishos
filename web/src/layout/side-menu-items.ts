@@ -18,6 +18,13 @@ export const sideMenuItems: SideMenuItem[] = [
     route: '/upcoming',
   },
   {
+    name: 'recommendations',
+    tooltip: 'Discover',
+    iconLibrary: 'hi-outline',
+    iconName: 'fire',
+    route: '/recommendations',
+  },
+  {
     name: 'shows',
     tooltip: 'Shows',
     iconLibrary: 'hi-outline',

@@ -7,7 +7,9 @@ import (
 type Show struct {
 	Model
 	ProviderID    *string    `json:"providerId"`
+	ProviderType  string     `json:"providerType" gorm:"default:tvmaze;index"`
 	ProviderUrl   *string    `json:"providerUrl"`
+	MediaType     string     `json:"mediaType" gorm:"default:tv;index"`
 	Name          string     `json:"name" gorm:"not null"`
 	Summary       *string    `json:"summary" gorm:"type:text"`
 	Language      *string    `json:"language"`
@@ -22,4 +24,5 @@ type Show struct {
 	ImdbId        *string    `json:"imdbId"`
 	Seasons       []Season   `json:"seasons"`
 	Completed     *int       `gorm:"-" json:"completed"`
+	ShowWatched   *bool      `gorm:"-" json:"showWatched"`
 }

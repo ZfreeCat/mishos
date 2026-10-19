@@ -1,6 +1,7 @@
 import './components/not-found-page';
 import './features/auth/login-page';
 import './features/auth/onboarding-page';
+import './features/recommendations/recommendations-page';
 import './features/search/search-results-page';
 import './features/settings/settings-page';
 import './features/shows/shows-page';
@@ -21,6 +22,7 @@ export const routes = [
   { path: '/show/preview/:id', component: 'show-preview-page', action: authGuard },
   { path: '/upcoming', component: 'upcoming-page', action: authGuard },
   { path: '/watchlist', component: 'watchlist-page', action: authGuard },
+  { path: '/recommendations', component: 'recommendations-page', action: authGuard },
   { path: '/settings', component: 'settings-page', action: authGuard },
   { path: '(.*)', component: 'not-found-page' },
 ];

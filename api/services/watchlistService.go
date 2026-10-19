@@ -100,6 +100,11 @@ func (ws WatchListService) GetUnwatched(userId uint) (*[]modelsdto.WatchlistEpis
 		}
 	}
 
+	// rewrite remote image urls to local cached urls
+	for i := range unwatched {
+		unwatched[i].ImageMedium = RewriteImageUrl(unwatched[i].ImageMedium)
+	}
+
 	return &unwatched, nil
 }
 
@@ -149,6 +154,11 @@ func (ws WatchListService) GetRecent(userId uint) (*[]modelsdto.WatchlistEpisode
 		return nil, err
 	}
 
+	// rewrite remote image urls to local cached urls
+	for i := range watched {
+		watched[i].ImageMedium = RewriteImageUrl(watched[i].ImageMedium)
+	}
+
 	return &watched, nil
 }
 
@@ -184,6 +194,11 @@ func (ws WatchListService) GetUpcoming(userId uint) (*[]modelsdto.WatchlistEpiso
 
 	if err != nil {
 		return nil, err
+	}
+
+	// rewrite remote image urls to local cached urls
+	for i := range upcoming {
+		upcoming[i].ImageMedium = RewriteImageUrl(upcoming[i].ImageMedium)
 	}
 
 	return &upcoming, nil

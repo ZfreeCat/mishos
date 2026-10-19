@@ -22,6 +22,7 @@ import (
 const (
 	NotifierTypeApprise = "apprise"
 	NotifierTypeNtfy    = "ntfy"
+	NotifierTypeBark    = "bark"
 )
 
 type NotifierTask struct {
@@ -236,7 +237,7 @@ func NormalizeNotifierType(notifierType string) string {
 }
 
 func IsValidNotifierType(notifierType string) bool {
-	return notifierType == NotifierTypeApprise || notifierType == NotifierTypeNtfy
+	return notifierType == NotifierTypeApprise || notifierType == NotifierTypeNtfy || notifierType == NotifierTypeBark
 }
 
 func SendNotificationToURL(url string, notifierType string, payload NotificationPayload) error {
@@ -257,7 +258,7 @@ func SendNotificationToURL(url string, notifierType string, payload Notification
 		}
 
 		request.Header.Set("Title", mime.QEncoding.Encode("UTF-8", payload.Title))
-	case NotifierTypeApprise:
+	case NotifierTypeApprise, NotifierTypeBark:
 		marshalled, marshalErr := json.Marshal(payload)
 		if marshalErr != nil {
 			return marshalErr

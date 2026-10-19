@@ -87,6 +87,16 @@ func RunMigration() {
 	if err != nil {
 		panic("migrating WatchedEpisode failed")
 	}
+
+	err = db.DB.AutoMigrate(&modelsdb.WatchedShow{})
+	if err != nil {
+		panic("migrating WatchedShow failed")
+	}
+
+	err = db.DB.AutoMigrate(&modelsdb.ImageCache{})
+	if err != nil {
+		panic("migrating ImageCache failed")
+	}
 }
 
 func RunMigrationIfEnv() {

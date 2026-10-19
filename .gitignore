@@ -1,2 +1,42 @@
 .pnpm-store
 api/rundev.sh
+
+# ===== Secrets & local deployment config =====
+# docker-compose.yml contains TMDB_API_KEY and SECRET - NEVER commit it.
+# Use docker-compose-example.yml as the template for deployment.
+docker-compose.yml
+web/.env
+web/.env.prod
+web/.env.local
+*.env
+
+# ===== Runtime data =====
+data/
+data-images/
+*.db
+*.sqlite
+
+# ===== Dependencies & build output =====
+node_modules/
+dist/
+build/
+api/dist/
+api/tmp/
+
+# ===== Logs =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== Editor =====
+*.local
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+.idea/

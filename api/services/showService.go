@@ -50,6 +50,11 @@ func (showService ShowService) FindFollowed(userId uint, followedShows *[]models
 		Scan(followedShows).
 		Error
 
+	// rewrite remote image urls to local cached urls
+	for i := range *followedShows {
+		(*followedShows)[i].ImageMedium = RewriteImageUrl((*followedShows)[i].ImageMedium)
+	}
+
 	return err
 }
 
@@ -178,6 +183,14 @@ func (showService ShowService) SearchShow(userId uint, query string, results *[]
 		}
 	}
 
+	// rewrite remote image urls to local cached urls
+	for i := range *results {
+		if (*results)[i].ImageMedium != nil {
+			rewritten := RewriteImageUrl(*(*results)[i].ImageMedium)
+			(*results)[i].ImageMedium = &rewritten
+		}
+	}
+
 	return nil
 }
 
@@ -186,6 +199,16 @@ func (showService ShowService) PreviewShow(providerId string, show *modelsdb.Sho
 
 	if err := providerClient.GetShow(providerId, show); err != nil {
 		return err
+	}
+
+	// rewrite remote image urls to local cached urls
+	if show.ImageMedium != nil {
+		rewritten := RewriteImageUrl(*show.ImageMedium)
+		show.ImageMedium = &rewritten
+	}
+	if show.ImageOriginal != nil {
+		rewritten := RewriteImageUrl(*show.ImageOriginal)
+		show.ImageOriginal = &rewritten
 	}
 
 	return nil
@@ -254,8 +277,30 @@ func (showService ShowService) GetShow(userId uint, showId uint64) (show *models
 			}
 		}
 
-		completed := int(float32(len(watchedIds)) / float32(airedCount) * 100)
+		completed := 0
+		if airedCount > 0 {
+			completed = int(float32(len(watchedIds)) / float32(airedCount) * 100)
+		}
 		show.Completed = &completed
+
+		// for movies / shows without episodes expose the whole-show watch state
+		if show.MediaType == "movie" || len(show.Seasons) == 0 {
+			watchedShowService := WatchedShowService{}
+			watched, err := watchedShowService.IsShowWatched(userId, show.ID)
+			if err == nil {
+				show.ShowWatched = &watched
+			}
+		}
+
+		// rewrite remote image urls to local cached urls
+		if show.ImageMedium != nil {
+			rewritten := RewriteImageUrl(*show.ImageMedium)
+			show.ImageMedium = &rewritten
+		}
+		if show.ImageOriginal != nil {
+			rewritten := RewriteImageUrl(*show.ImageOriginal)
+			show.ImageOriginal = &rewritten
+		}
 
 		return &show, nil
 	} else {

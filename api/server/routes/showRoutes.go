@@ -19,5 +19,7 @@ func AddShowRoutes(router *gin.Engine) {
 		authRoutes.POST("/add", showController.AddOrFollowShow)
 		authRoutes.POST("/unfollow", showController.Unfollow)
 		authRoutes.GET("/update/:showId", showController.UpdateShow)
+		authRoutes.POST("/watch", showController.WatchShow)
+		authRoutes.POST("/unwatch", showController.UnwatchShow)
 	}
 }

@@ -62,3 +62,18 @@ export const unfollowShow = async (show: ShowDto): Promise<void> => {
 export const refreshShow = async (showId: string): Promise<void> => {
   await kyWrapper.get(`show/update/${showId}`);
 };
+
+export const watchShow = async (showId: number): Promise<boolean> => {
+  const response: any = await kyWrapper
+    .post('show/watch', {
+      json: { showId },
+    })
+    .json();
+  return response?.watched === true;
+};
+
+export const unwatchShow = async (showId: number): Promise<void> => {
+  await kyWrapper.post('show/unwatch', {
+    json: { showId },
+  });
+};

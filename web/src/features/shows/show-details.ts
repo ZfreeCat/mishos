@@ -33,6 +33,7 @@ export class ShowDetails extends LitElement {
   private renderShow() {
     if (!this.show) return null;
 
+    const isMovie = this.show.mediaType === 'movie' || !this.show.seasons || this.show.seasons.length === 0;
     const currentSeason = this.show.seasons?.find(s => s.number === this.season);
 
     return html`
@@ -43,6 +44,19 @@ export class ShowDetails extends LitElement {
             this.show.id
               ? html`
                 <div class="show-header-buttons">
+                  ${
+                    isMovie
+                      ? html`
+                        <sl-button
+                          variant=${this.show.showWatched ? 'neutral' : 'success'}
+                          size="small"
+                          @click=${this.handleClickToggleShowWatched}
+                        >
+                          ${this.show.showWatched ? 'Unwatch' : 'Mark Watched'}
+                        </sl-button>
+                      `
+                      : null
+                  }
                   <sl-button variant="warning" size="small" @click=${this.handleClickRemove}>
                     <sl-icon slot="prefix" library="hi-outline" name="bookmark-slash"></sl-icon>
                     Remove
@@ -66,9 +80,15 @@ export class ShowDetails extends LitElement {
                 : html` <div class="no-image-placeholder"></div> `
             }
             <perc-complete percent="${ifDefined(this.show.completed)}"></perc-complete>
-            <a href=${ifDefined(this.show.providerUrl)} class="provider-link" target="_blank">
-              view at tvmaze.com
-            </a>
+            ${
+              this.show.providerUrl
+                ? html`
+                    <a href=${ifDefined(this.show.providerUrl)} class="provider-link" target="_blank">
+                      view at ${this.show.providerType === 'tmdb' ? 'themoviedb.org' : 'tvmaze.com'}
+                    </a>
+                  `
+                : null
+            }
           </div>
           <div class="right-content">
             <p class="summary">${this.show.summary}</p>
@@ -82,43 +102,51 @@ export class ShowDetails extends LitElement {
                   : null
               }
             </ul>
-            <form>
-              <sl-select
-                name="season"
-                value=${this.season}
-                class="seasons-select"
-                @sl-change=${this.handleChangeSeason}
-              >
-                ${this.show.seasons?.map(
-                  season => html` <sl-option value=${ifDefined(season.number)}>Season ${season.number}</sl-option> `
-                )}
-              </sl-select>
-              ${
-                !this.preview
-                  ? html`
-                    <sl-switch
-                      name="previous"
-                      value="1"
-                      size="small"
-                      class="previous"
-                      @sl-change=${this.handleChangePrevious}
-                    >
-                      Mark Previous
-                    </sl-switch>
-                  `
-                  : null
-              }
-            </form>
             ${
-              currentSeason && currentSeason.episodes && currentSeason.episodes.length > 0
-                ? html`
-                  <div class="episode-list">
-                    ${currentSeason.episodes.map(
-                      episode => html`<episode-card .episode=${episode} ?preview=${this.preview}></episode-card>`
-                    )}
-                  </div>
-                `
-                : html`<div class="no-episodes">No episodes available for this show or season</div>`
+              isMovie
+                ? html`<div class="no-episodes">Movie - mark as watched when you have seen it</div>`
+                : html`
+                    <form>
+                      <sl-select
+                        name="season"
+                        value=${this.season}
+                        class="seasons-select"
+                        @sl-change=${this.handleChangeSeason}
+                      >
+                        ${this.show.seasons?.map(
+                          season =>
+                            html` <sl-option value=${ifDefined(season.number)}>Season ${season.number}</sl-option> `
+                        )}
+                      </sl-select>
+                      ${
+                        !this.preview
+                          ? html`
+                            <sl-switch
+                              name="previous"
+                              value="1"
+                              size="small"
+                              class="previous"
+                              @sl-change=${this.handleChangePrevious}
+                            >
+                              Mark Previous
+                            </sl-switch>
+                          `
+                          : null
+                      }
+                    </form>
+                    ${
+                      currentSeason && currentSeason.episodes && currentSeason.episodes.length > 0
+                        ? html`
+                          <div class="episode-list">
+                            ${currentSeason.episodes.map(
+                              episode =>
+                                html`<episode-card .episode=${episode} ?preview=${this.preview}></episode-card>`
+                            )}
+                          </div>
+                        `
+                        : html`<div class="no-episodes">No episodes available for this show or season</div>`
+                    }
+                  `
             }
           </div>
         </div>
@@ -144,6 +172,12 @@ export class ShowDetails extends LitElement {
   private handleClickRemove(event: Event) {
     event.preventDefault();
     this.dispatchEvent(createEvent('remove-show', this.show));
+  }
+
+  private handleClickToggleShowWatched(event: Event) {
+    event.preventDefault();
+    const watched = this.show?.showWatched === true;
+    this.dispatchEvent(createEvent(watched ? 'unwatch-show' : 'watch-show', this.show));
   }
 
   private handleChangeSeason(event: Event) {

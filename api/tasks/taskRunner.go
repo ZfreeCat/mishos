@@ -8,6 +8,8 @@ import (
 type TaskRunner struct {
 	notifierTask       *NotifierTask
 	providerUpdateTask *ProviderUpdateTask
+	tmdbSyncTask       *TmdbSyncTask
+	imagePrefetchTask  *ImagePrefetchTask
 	scheduler          gocron.Scheduler
 }
 
@@ -31,6 +33,18 @@ func (tr TaskRunner) InitializeTasks() {
 	tr.notifierTask = NewNotifierTask(sch)
 	if err = tr.notifierTask.InitTasks(); err != nil {
 		log.Fatal().Err(err).Msg("error initializing notifier tasks")
+	}
+
+	// tmdb watchlist sync task
+	tr.tmdbSyncTask = NewTmdbSyncTask(sch)
+	if err := tr.tmdbSyncTask.InitTasks(); err != nil {
+		log.Fatal().Err(err).Msg("error initializing tmdb sync task")
+	}
+
+	// image prefetch task
+	tr.imagePrefetchTask = NewImagePrefetchTask(sch)
+	if err := tr.imagePrefetchTask.InitTasks(); err != nil {
+		log.Fatal().Err(err).Msg("error initializing image prefetch task")
 	}
 
 	tr.scheduler.Start()

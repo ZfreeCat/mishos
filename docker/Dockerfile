@@ -2,7 +2,7 @@ FROM node:20 as buildweb
 
 WORKDIR /app/web
 COPY ./web/package.json /app/web/package.json
-RUN npm install
+RUN npm install --registry=https://registry.npmmirror.com
 COPY ./web .
 COPY ./web/.env.prod ./.env
 RUN npm run build
@@ -10,11 +10,10 @@ RUN npm run build
 FROM golang:1.22-alpine as buildapi
 
 WORKDIR /app/api
-RUN apk add curl
 COPY ./api .
-RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+ENV GOPROXY=https://goproxy.cn,direct
 RUN go mod download
-RUN /usr/local/bin/task build
+RUN mkdir -p ./dist && CGO_ENABLED=0 go build -o ./dist/mishosapi .
 
 FROM caddy:alpine
 

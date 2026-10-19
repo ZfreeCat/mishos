@@ -7,7 +7,7 @@ import { sharedStyles } from '@/styles/shared-styles';
 import type { ShowDto } from '@/types';
 import { createToastEvent } from '@/utils';
 
-import { getShowDetails, refreshShow, unfollowShow, watchEpisode } from './shows-api';
+import { getShowDetails, refreshShow, unfollowShow, unwatchShow, watchEpisode, watchShow } from './shows-api';
 
 import '@/features/shows/shows-search-form';
 import '@/layout/app-layout';
@@ -37,6 +37,8 @@ export class ShowViewPage extends BaseElement {
                 @toggle-previous=${this.handleTogglePrevious}
                 @remove-show=${this.handleRemoveShow}
                 @refresh-show=${this.handleRefreshShow}
+                @watch-show=${this.handleWatchShow}
+                @unwatch-show=${this.handleUnwatchShow}
               ></show-details>`
               : this.show === null
                 ? html`<div>Show could not be found</div>`
@@ -68,6 +70,20 @@ export class ShowViewPage extends BaseElement {
   private handleTogglePrevious(event: Event) {
     if (event && event instanceof CustomEvent) {
       this.togglePrevious = event.detail;
+    }
+  }
+
+  private async handleWatchShow(event: Event) {
+    if (event && event instanceof CustomEvent && event.detail?.id) {
+      await this.callApi(() => watchShow(Number(event.detail.id)));
+      await this.loadShow(this.show?.id ?? event.detail.id);
+    }
+  }
+
+  private async handleUnwatchShow(event: Event) {
+    if (event && event instanceof CustomEvent && event.detail?.id) {
+      await this.callApi(() => unwatchShow(Number(event.detail.id)));
+      await this.loadShow(this.show?.id ?? event.detail.id);
     }
   }
 

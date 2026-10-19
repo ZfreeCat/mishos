@@ -53,6 +53,7 @@ export class SettingsGeneral extends BaseElement {
           <sl-select name="notifierType" label="Notifier Type" value=${notifierType}>
             <sl-option value="apprise">Apprise</sl-option>
             <sl-option value="ntfy">Ntfy</sl-option>
+            <sl-option value="bark">Bark</sl-option>
           </sl-select>
         </div>
         <div>
