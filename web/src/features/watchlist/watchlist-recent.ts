@@ -6,6 +6,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 
 import { BaseElement } from '@/components/base-element';
 import { watchEpisode } from '@/features/shows/shows-api';
+import { askForRating, type RatingAskResult } from '@/features/shows/rating-dialog';
 import { sharedStyles } from '@/styles/shared-styles';
 import type { WatchlistEpisodeDto } from '@/types';
 import { createToastEvent, formatAirTime } from '@/utils';
@@ -99,7 +100,10 @@ export class WatchListRecent extends BaseElement {
 
   async handleWatch(episode: WatchlistEpisodeDto) {
     if (episode && episode.id) {
-      await watchEpisode(episode.id, true);
+      const result: RatingAskResult = await askForRating(episode.showName ?? episode.name);
+      if (result === 'cancel') return;
+      const score = result === 'skip' ? 0 : result;
+      await watchEpisode(episode.id, true, false, score);
       this.episodes = await this.callApi(() => getWatchListRecent());
       this.dispatchEvent(
         createToastEvent({

@@ -55,12 +55,13 @@ export const getShowDetails = async (showId: string): Promise<ShowDto | undefine
   return response.show as ShowDto;
 };
 
-export const watchEpisode = async (episodeId: number, watch: boolean, previous = false) => {
+export const watchEpisode = async (episodeId: number, watch: boolean, previous = false, score = 0) => {
   // toggle previous should only apply when marking watched
   if (watch && previous) {
     const response: any = await kyWrapper.post('episode/watchprevious', {
       json: {
         episodeId,
+        score,
       },
     });
     return response?.watched === true;
@@ -69,6 +70,7 @@ export const watchEpisode = async (episodeId: number, watch: boolean, previous =
   const response: any = await kyWrapper.post(watch ? 'episode/watch' : 'episode/unwatch', {
     json: {
       episodeId,
+      score,
     },
   });
   return response?.watched === true;
@@ -106,10 +108,10 @@ export const refreshShow = async (showId: string): Promise<void> => {
   await kyWrapper.get(`show/update/${showId}`);
 };
 
-export const watchShow = async (showId: number): Promise<boolean> => {
+export const watchShow = async (showId: number, score = 0): Promise<boolean> => {
   const response: any = await kyWrapper
     .post('show/watch', {
-      json: { showId },
+      json: { showId, score },
     })
     .json();
   return response?.watched === true;

@@ -12,7 +12,7 @@ import (
 
 type EpisodeService struct{}
 
-func (es EpisodeService) Watch(userId uint, episodeId uint) (watched bool, err error) {
+func (es EpisodeService) Watch(userId uint, episodeId uint, score float64) (watched bool, err error) {
 	count := int64(0)
 	if err := db.DB.Model(&modelsdb.WatchedEpisode{}).Where("user_id = ? AND episode_id = ?", userId, episodeId).Count(&count).Error; err != nil {
 		return false, err
@@ -39,14 +39,14 @@ func (es EpisodeService) Watch(userId uint, episodeId uint) (watched bool, err e
 		return false, err
 	}
 
-	// mirror watched state back to TMDB (best-effort)
+	// mirror watched state back to TMDB with the user's score (best-effort)
 	tmdbService := TmdbService{}
-	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, true)
+	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, true, score)
 
 	return true, nil
 }
 
-func (es EpisodeService) WatchPrevious(userId uint, episodeId uint) (episodesWatched int, err error) {
+func (es EpisodeService) WatchPrevious(userId uint, episodeId uint, score float64) (episodesWatched int, err error) {
 	var episode modelsdb.Episode
 	if err := db.DB.Preload("Season").First(&episode, episodeId).Error; err != nil {
 		return 0, err
@@ -118,9 +118,9 @@ func (es EpisodeService) WatchPrevious(userId uint, episodeId uint) (episodesWat
 		return 0, err
 	}
 
-	// mirror the batch watch back to TMDB (best-effort)
+	// mirror the batch watch back to TMDB with the user's score (best-effort)
 	tmdbService := TmdbService{}
-	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, true)
+	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, true, score)
 
 	return len(previousEpisodes), nil
 }
@@ -135,9 +135,9 @@ func (es EpisodeService) Unwatch(userId uint, episodeId uint) error {
 		return err
 	}
 
-	// mirror unwatch back to TMDB (best-effort)
+	// mirror unwatch back to TMDB (best-effort; front-end confirms first)
 	tmdbService := TmdbService{}
-	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, false)
+	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, false, 0)
 
 	return nil
 }

@@ -238,7 +238,8 @@ func (sc ShowController) WatchShow(context *gin.Context) {
 	}
 
 	var body struct {
-		ShowID uint `json:"showId" binding:"required"`
+		ShowID uint    `json:"showId" binding:"required"`
+		Score  float64 `json:"score"`
 	}
 
 	if context.BindJSON(&body) != nil {
@@ -248,7 +249,7 @@ func (sc ShowController) WatchShow(context *gin.Context) {
 
 	watchedShowService := services.WatchedShowService{}
 
-	watched, err := watchedShowService.WatchShow(user.ID, body.ShowID)
+	watched, err := watchedShowService.WatchShow(user.ID, body.ShowID, body.Score)
 	if err != nil {
 		services.SendError(context, err.Error())
 		return

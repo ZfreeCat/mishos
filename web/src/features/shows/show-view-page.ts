@@ -8,6 +8,7 @@ import type { ShowDto } from '@/types';
 import { createToastEvent } from '@/utils';
 
 import { getShowDetails, refreshShow, unfollowShow, unwatchShow, watchEpisode, watchShow } from './shows-api';
+import { askForRating, confirmAction, type RatingAskResult } from './rating-dialog';
 
 import '@/features/shows/shows-search-form';
 import '@/layout/app-layout';
@@ -61,7 +62,20 @@ export class ShowViewPage extends BaseElement {
     if (event && event instanceof CustomEvent) {
       const watchData = event.detail;
       if (watchData.episodeId && this.show?.id) {
-        await this.callApi(() => watchEpisode(watchData.episodeId, watched, this.togglePrevious));
+        let score = 0;
+        if (watched) {
+          const result: RatingAskResult = await askForRating(this.show?.name ?? '');
+          if (result === 'cancel') return;
+          if (result !== 'skip') score = result;
+        } else {
+          const confirmed = await confirmAction(
+            'Unwatching will remove this show\'s rating from TMDB. Continue?',
+            'Unwatch',
+            'Unwatch'
+          );
+          if (!confirmed) return;
+        }
+        await this.callApi(() => watchEpisode(watchData.episodeId, watched, this.togglePrevious, score));
         await this.loadShow(this.show.id);
       }
     }
@@ -75,13 +89,22 @@ export class ShowViewPage extends BaseElement {
 
   private async handleWatchShow(event: Event) {
     if (event && event instanceof CustomEvent && event.detail?.id) {
-      await this.callApi(() => watchShow(Number(event.detail.id)));
+      const result: RatingAskResult = await askForRating(this.show?.name ?? '');
+      if (result === 'cancel') return;
+      const score = result === 'skip' ? 0 : result;
+      await this.callApi(() => watchShow(Number(event.detail.id), score));
       await this.loadShow(this.show?.id ?? event.detail.id);
     }
   }
 
   private async handleUnwatchShow(event: Event) {
     if (event && event instanceof CustomEvent && event.detail?.id) {
+      const confirmed = await confirmAction(
+        'Unwatching will remove this show\'s rating from TMDB. Continue?',
+        'Unwatch',
+        'Unwatch'
+      );
+      if (!confirmed) return;
       await this.callApi(() => unwatchShow(Number(event.detail.id)));
       await this.loadShow(this.show?.id ?? event.detail.id);
     }

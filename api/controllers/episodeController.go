@@ -21,7 +21,8 @@ func (ec EpisodeController) WatchEpisode(context *gin.Context) {
 	}
 
 	var body struct {
-		EpisodeID uint `json:"episodeId" binding:"required"`
+		EpisodeID uint    `json:"episodeId" binding:"required"`
+		Score     float64 `json:"score"`
 	}
 
 	if context.BindJSON(&body) != nil {
@@ -29,7 +30,7 @@ func (ec EpisodeController) WatchEpisode(context *gin.Context) {
 		return
 	}
 
-	watched, err := episodeService.Watch(user.ID, body.EpisodeID)
+	watched, err := episodeService.Watch(user.ID, body.EpisodeID, body.Score)
 	if err != nil {
 		services.SendError(context, err.Error())
 		return
@@ -50,7 +51,8 @@ func (ec EpisodeController) WatchPreviousEpisodes(context *gin.Context) {
 	}
 
 	var body struct {
-		EpisodeID uint `json:"episodeId" binding:"required"`
+		EpisodeID uint    `json:"episodeId" binding:"required"`
+		Score     float64 `json:"score"`
 	}
 
 	if context.BindJSON(&body) != nil {
@@ -58,7 +60,7 @@ func (ec EpisodeController) WatchPreviousEpisodes(context *gin.Context) {
 		return
 	}
 
-	watched, err := episodeService.WatchPrevious(user.ID, body.EpisodeID)
+	watched, err := episodeService.WatchPrevious(user.ID, body.EpisodeID, body.Score)
 
 	if err != nil {
 		services.SendError(context, err.Error())

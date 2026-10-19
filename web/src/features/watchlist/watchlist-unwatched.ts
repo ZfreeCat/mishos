@@ -6,6 +6,7 @@ import { when } from 'lit/directives/when.js';
 
 import { BaseElement } from '@/components/base-element';
 import { watchEpisode, watchShow } from '@/features/shows/shows-api';
+import { askForRating, type RatingAskResult } from '@/features/shows/rating-dialog';
 import { sharedStyles } from '@/styles/shared-styles';
 import type { WatchlistEpisodeDto } from '@/types';
 import { createToastEvent, formatAirTime } from '@/utils';
@@ -115,10 +116,13 @@ export class WatchListUnwatched extends BaseElement {
 
   async handleWatch(episode: WatchlistEpisodeDto) {
     if (episode && episode.id) {
+      const result: RatingAskResult = await askForRating(episode.showName ?? episode.name);
+      if (result === 'cancel') return;
+      const score = result === 'skip' ? 0 : result;
       if (episode.showMediaType === 'movie') {
-        await this.callApi(() => watchShow(episode.showId));
+        await this.callApi(() => watchShow(episode.showId, score));
       } else {
-        await this.callApi(() => watchEpisode(episode.id, true));
+        await this.callApi(() => watchEpisode(episode.id, true, false, score));
       }
       this.episodes = await this.callApi(() => getWatchList());
       this.dispatchEvent(

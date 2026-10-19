@@ -14,7 +14,7 @@ var errShowNotFound = errors.New("show not found")
 // without seasons/episodes) as watched.
 type WatchedShowService struct{}
 
-func (ws WatchedShowService) WatchShow(userId uint, showId uint) (watched bool, err error) {
+func (ws WatchedShowService) WatchShow(userId uint, showId uint, score float64) (watched bool, err error) {
 	count := int64(0)
 	if err := db.DB.Model(&modelsdb.WatchedShow{}).Where("user_id = ? AND show_id = ?", userId, showId).Count(&count).Error; err != nil {
 		return false, err
@@ -45,9 +45,9 @@ func (ws WatchedShowService) WatchShow(userId uint, showId uint) (watched bool, 
 		return false, err
 	}
 
-	// mirror watched state back to TMDB (best-effort)
+	// mirror watched state back to TMDB with the user's score (best-effort)
 	tmdbService := TmdbService{}
-	tmdbService.SyncWatchedToTmdb(userId, showId, true)
+	tmdbService.SyncWatchedToTmdb(userId, showId, true, score)
 
 	return true, nil
 }
@@ -57,9 +57,9 @@ func (ws WatchedShowService) UnwatchShow(userId uint, showId uint) error {
 		return err
 	}
 
-	// mirror unwatch back to TMDB (best-effort)
+	// mirror unwatch back to TMDB (best-effort; front-end confirms first)
 	tmdbService := TmdbService{}
-	tmdbService.SyncWatchedToTmdb(userId, showId, false)
+	tmdbService.SyncWatchedToTmdb(userId, showId, false, 0)
 
 	return nil
 }

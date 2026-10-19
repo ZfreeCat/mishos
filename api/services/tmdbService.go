@@ -240,10 +240,15 @@ func (ts TmdbService) SyncFollowToTmdb(userId uint, showId uint, follow bool) {
 	}
 }
 
-// SyncWatchedToTmdb mirrors the local watched/unwatched state back to the
-// user's TMDB ratings: watched = 10/10 rating, unwatched = rating removed.
+// SyncWatchedToTmdb mirrors the local watched/unwatched state to the user's
+// TMDB ratings. Rules:
+//   - watched with a user-supplied score (score > 0): writes that score only
+//     when the item has no rating yet (a manual TMDB rating is never touched)
+//   - watched without a score (score <= 0): local-only, TMDB untouched
+//   - unwatched: deletes the TMDB rating (front-end confirms first)
+//
 // Best-effort: remote failures are logged and never fail the local operation.
-func (ts TmdbService) SyncWatchedToTmdb(userId uint, showId uint, watched bool) {
+func (ts TmdbService) SyncWatchedToTmdb(userId uint, showId uint, watched bool, score float64) {
 	var user modelsdb.User
 	if err := db.DB.Preload("UserConfig").First(&user, userId).Error; err != nil {
 		return
@@ -270,32 +275,28 @@ func (ts TmdbService) SyncWatchedToTmdb(userId uint, showId uint, watched bool) 
 
 	client := tvproviders.TmdbClient{}
 
-	// Guard against overwriting ratings the user set manually on TMDB:
-	// - marking watched only writes 10/10 when the item has no rating yet
-	// - unmarking watched only deletes the 10 we wrote ourselves
-	current, err := client.GetRating(cfg.TmdbSessionId, show.MediaType, mediaId)
-	if err != nil {
-		log.Error().Err(err).Msgf("tmdb: error reading current rating for user %d show %d", userId, showId)
-		return
-	}
-
-	var syncErr error
 	if watched {
+		if score <= 0 {
+			return
+		}
+		// never overwrite a rating the user set manually on TMDB
+		current, err := client.GetRating(cfg.TmdbSessionId, show.MediaType, mediaId)
+		if err != nil {
+			log.Error().Err(err).Msgf("tmdb: error reading current rating for user %d show %d", userId, showId)
+			return
+		}
 		if current > 0 {
 			log.Info().Msgf("tmdb: show %d already rated %.1f by user %d, keeping it", showId, current, userId)
 			return
 		}
-		syncErr = client.RateItem(cfg.TmdbSessionId, show.MediaType, mediaId, 10)
-	} else {
-		if current > 0 && current != 10 {
-			log.Info().Msgf("tmdb: show %d has manual rating %.1f by user %d, not deleting it", showId, current, userId)
-			return
+		if err := client.RateItem(cfg.TmdbSessionId, show.MediaType, mediaId, score); err != nil {
+			log.Error().Err(err).Msgf("tmdb: error writing rating for user %d show %d", userId, showId)
 		}
-		syncErr = client.DeleteRating(cfg.TmdbSessionId, show.MediaType, mediaId)
+		return
 	}
 
-	if syncErr != nil {
-		log.Error().Err(syncErr).Msgf("tmdb: error syncing watched state for user %d show %d (watched=%t)", userId, showId, watched)
+	if err := client.DeleteRating(cfg.TmdbSessionId, show.MediaType, mediaId); err != nil {
+		log.Error().Err(err).Msgf("tmdb: error deleting rating for user %d show %d", userId, showId)
 	}
 }
 
