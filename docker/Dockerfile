@@ -7,7 +7,7 @@ COPY ./web .
 COPY ./web/.env.prod ./.env
 RUN npm run build
 
-FROM golang:1.22-alpine as buildapi
+FROM golang:1.23-alpine as buildapi
 
 WORKDIR /app/api
 COPY ./api .
@@ -30,5 +30,6 @@ RUN tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz
 
 COPY ./docker/s6/web/run /etc/services.d/web/run
 COPY ./docker/s6/api/run /etc/services.d/api/run
+RUN chmod +x /etc/services.d/web/run /etc/services.d/api/run
 
 ENTRYPOINT ["/init"]

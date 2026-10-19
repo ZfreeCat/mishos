@@ -240,6 +240,70 @@ func (ts TmdbService) SyncFollowToTmdb(userId uint, showId uint, follow bool) {
 	}
 }
 
+// SyncWatchedToTmdb mirrors the local watched/unwatched state back to the
+// user's TMDB ratings: watched = 10/10 rating, unwatched = rating removed.
+// Best-effort: remote failures are logged and never fail the local operation.
+func (ts TmdbService) SyncWatchedToTmdb(userId uint, showId uint, watched bool) {
+	var user modelsdb.User
+	if err := db.DB.Preload("UserConfig").First(&user, userId).Error; err != nil {
+		return
+	}
+
+	cfg := user.UserConfig
+	if cfg.ID == 0 || cfg.TmdbSessionId == "" {
+		return
+	}
+
+	var show modelsdb.Show
+	if err := db.DB.First(&show, showId).Error; err != nil {
+		return
+	}
+	if show.ProviderType != TmdbProviderType || show.ProviderID == nil {
+		return
+	}
+
+	mediaId, err := strconv.Atoi(*show.ProviderID)
+	if err != nil {
+		log.Error().Err(err).Msgf("tmdb: invalid provider id for show %d", showId)
+		return
+	}
+
+	client := tvproviders.TmdbClient{}
+	var syncErr error
+	if watched {
+		syncErr = client.RateItem(cfg.TmdbSessionId, show.MediaType, mediaId, 10)
+	} else {
+		syncErr = client.DeleteRating(cfg.TmdbSessionId, show.MediaType, mediaId)
+	}
+
+	if syncErr != nil {
+		log.Error().Err(syncErr).Msgf("tmdb: error syncing watched state for user %d show %d (watched=%t)", userId, showId, watched)
+	}
+}
+
+// ImportShow pulls a movie/tv show (with seasons and episodes) from TMDB into
+// the local library without following it. Returns the local show id.
+func (ts TmdbService) ImportShow(tmdbId int, mediaType string) (uint, error) {
+	providerID := strconv.Itoa(tmdbId)
+
+	var show modelsdb.Show
+	if err := db.DB.Where("provider_type = ? AND provider_id = ?", TmdbProviderType, providerID).First(&show).Error; err == nil {
+		return show.ID, nil
+	}
+
+	client := tvproviders.TmdbClient{}
+	newShow, err := client.GetShow(providerID, mediaType)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := db.DB.Create(newShow).Error; err != nil {
+		return 0, err
+	}
+
+	return newShow.ID, nil
+}
+
 // ensureShowFollowed creates the show from TMDB if missing and follows it.
 func (ts TmdbService) ensureShowFollowed(userId uint, tmdbId int, mediaType string) (added int, followed int, err error) {
 	providerID := strconv.Itoa(tmdbId)

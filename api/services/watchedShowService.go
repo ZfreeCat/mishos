@@ -45,6 +45,10 @@ func (ws WatchedShowService) WatchShow(userId uint, showId uint) (watched bool, 
 		return false, err
 	}
 
+	// mirror watched state back to TMDB (best-effort)
+	tmdbService := TmdbService{}
+	tmdbService.SyncWatchedToTmdb(userId, showId, true)
+
 	return true, nil
 }
 
@@ -52,6 +56,10 @@ func (ws WatchedShowService) UnwatchShow(userId uint, showId uint) error {
 	if err := db.DB.Where("user_id = ? AND show_id = ?", userId, showId).Unscoped().Delete(&modelsdb.WatchedShow{}).Error; err != nil {
 		return err
 	}
+
+	// mirror unwatch back to TMDB (best-effort)
+	tmdbService := TmdbService{}
+	tmdbService.SyncWatchedToTmdb(userId, showId, false)
 
 	return nil
 }

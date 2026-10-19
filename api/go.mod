@@ -1,6 +1,6 @@
 module mishosapi
 
-go 1.22.1
+go 1.23
 
 require (
 	github.com/gin-contrib/cors v1.7.0
@@ -10,6 +10,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/grokify/html-strip-tags-go v0.1.0
 	github.com/joho/godotenv v1.5.1
+	github.com/mark3labs/mcp-go v0.20.1
 	github.com/mikestefanello/hooks v0.1.0
 	github.com/rs/zerolog v1.32.0
 	github.com/tidwall/gjson v1.17.1
@@ -49,6 +50,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/arch v0.7.0 // indirect
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848 // indirect
 	golang.org/x/net v0.22.0 // indirect

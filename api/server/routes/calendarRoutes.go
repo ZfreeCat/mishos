@@ -17,5 +17,6 @@ func AddCalendarRoutes(router *gin.Engine) {
 	}
 
 	// public subscription feed, protected by the random token itself
+	// (param is "token.ics"; the controller handles both spellings)
 	router.GET("/api/calendar/:token.ics", calendarController.GetCalendarIcs)
 }

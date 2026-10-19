@@ -17,6 +17,7 @@ func AddTmdbRoutes(router *gin.Engine) {
 		authRoutes.POST("/disconnect", tmdbController.Disconnect)
 		authRoutes.POST("/sync", tmdbController.Sync)
 		authRoutes.POST("/follow", tmdbController.FollowRecommendation)
+		authRoutes.POST("/import", tmdbController.ImportShow)
 		authRoutes.GET("/status", tmdbController.Status)
 		authRoutes.GET("/ratings", tmdbController.Ratings)
 	}

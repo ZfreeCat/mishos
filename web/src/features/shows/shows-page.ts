@@ -7,7 +7,7 @@ import { BaseElement } from '@/components/base-element';
 import { sharedStyles } from '@/styles/shared-styles';
 import type { RatingDto, ShowCardBadge } from '@/types';
 
-import { getMyRatings } from './shows-api';
+import { getMyRatings, importShow } from './shows-api';
 
 import '@/components/header-button';
 import '@/layout/app-layout';
@@ -95,13 +95,21 @@ export class ShowsPage extends BaseElement {
     return html`<div>No ratings found. Connect your TMDB account in Settings, then rate movies and shows on TMDB.</div>`;
   }
 
-  private handleSelectShow(event: Event, rating: RatingDto) {
+  private async handleSelectShow(event: Event, rating: RatingDto) {
     event.preventDefault();
     if (rating.showId) {
       Router.go(`/show/view/${rating.showId}`);
       return;
     }
-    this.toast({ variant: 'neutral', message: `${rating.name} is not in your Mishos library yet` });
+    // not in the local library yet -> auto-import from TMDB, then jump to details
+    this.loading = true;
+    const result = await this.callApi<{ showId?: number }>(() => importShow(rating.tmdbId, rating.mediaType));
+    this.loading = false;
+    if (result?.showId) {
+      Router.go(`/show/view/${result.showId}`);
+      return;
+    }
+    this.toast({ variant: 'neutral', message: `${rating.name} could not be imported` });
   }
 
   async connectedCallback() {

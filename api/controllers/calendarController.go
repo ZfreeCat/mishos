@@ -36,7 +36,17 @@ func (cc CalendarController) GetCalendarToken(context *gin.Context) {
 // GetCalendarIcs serves the public subscription feed at /api/calendar/{token}.ics.
 // The token protects the feed; Apple Calendar / any CalDAV client can subscribe.
 func (cc CalendarController) GetCalendarIcs(context *gin.Context) {
+	// gin registers the segment ":token.ics"; the param name therefore
+	// contains the dot. Accept both spellings so the token always resolves.
 	token := strings.TrimSuffix(context.Param("token"), ".ics")
+	if token == "" {
+		token = strings.TrimSuffix(context.Param("token.ics"), ".ics")
+	}
+
+	if token == "" {
+		context.AbortWithStatusJSON(http.StatusNotFound, modelsdto.ErrorDto{Error: "calendar feed not found"})
+		return
+	}
 
 	user, err := services.GetUserByCalendarToken(token)
 	if err != nil {

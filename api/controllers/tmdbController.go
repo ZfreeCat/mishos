@@ -13,6 +13,32 @@ type TmdbController struct{}
 
 var tmdbService = services.TmdbService{}
 
+// ImportShow pulls a movie/tv show into the local library without following it.
+func (tc TmdbController) ImportShow(context *gin.Context) {
+	if _, err := services.GetUserFromContext(context); err != nil {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, modelsdto.ErrorDto{Error: err.Error()})
+		return
+	}
+
+	var body struct {
+		TmdbId    int    `json:"tmdbId" binding:"required"`
+		MediaType string `json:"mediaType" binding:"required"`
+	}
+
+	if context.BindJSON(&body) != nil {
+		services.SendError(context, "tmdbId and mediaType are required")
+		return
+	}
+
+	showId, err := tmdbService.ImportShow(body.TmdbId, body.MediaType)
+	if err != nil {
+		services.SendError(context, err.Error())
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H{"showId": showId})
+}
+
 // CreateAuthToken starts the TMDB v3 auth flow (step 1).
 func (tc TmdbController) CreateAuthToken(context *gin.Context) {
 	_, err := services.GetUserFromContext(context)

@@ -334,6 +334,76 @@ func (tc TmdbClient) SetWatchlistItem(accountId string, sessionId string, mediaT
 	return nil
 }
 
+// RateItem rates a movie or tv show (POST /{mediaType}/{id}/rating).
+// Used to mirror the local "watched" state to TMDB (watched = 10/10).
+func (tc TmdbClient) RateItem(sessionId string, mediaType string, mediaId int, score float64) error {
+	key, err := TmdbApiKey()
+	if err != nil {
+		return err
+	}
+
+	base := TmdbApiBase()
+	apiURL := fmt.Sprintf("%s/%s/%d/rating?api_key=%s&session_id=%s", base, mediaType, mediaId, url.QueryEscape(key), url.QueryEscape(sessionId))
+
+	payload, err := json.Marshal(map[string]any{
+		"value": score,
+	})
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest("POST", apiURL, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := tmdbHTTPClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(response.Body)
+		statusMessage := gjson.Get(string(bodyBytes), "status_message").String()
+		return fmt.Errorf("tmdb: received error from provider with code %d: %s", response.StatusCode, statusMessage)
+	}
+
+	return nil
+}
+
+// DeleteRating removes the user's rating for a movie or tv show
+// (DELETE /{mediaType}/{id}/rating).
+func (tc TmdbClient) DeleteRating(sessionId string, mediaType string, mediaId int) error {
+	key, err := TmdbApiKey()
+	if err != nil {
+		return err
+	}
+
+	base := TmdbApiBase()
+	apiURL := fmt.Sprintf("%s/%s/%d/rating?api_key=%s&session_id=%s", base, mediaType, mediaId, url.QueryEscape(key), url.QueryEscape(sessionId))
+
+	request, err := http.NewRequest("DELETE", apiURL, nil)
+	if err != nil {
+		return err
+	}
+
+	response, err := tmdbHTTPClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(response.Body)
+		statusMessage := gjson.Get(string(bodyBytes), "status_message").String()
+		return fmt.Errorf("tmdb: received error from provider with code %d: %s", response.StatusCode, statusMessage)
+	}
+
+	return nil
+}
+
 // GetTrending loads trending movies or tv shows for a time window (day|week).
 func (tc TmdbClient) GetTrending(mediaType string, window string) ([]TmdbMediaItem, error) {
 	if mediaType == "" {

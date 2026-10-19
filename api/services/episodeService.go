@@ -22,11 +22,8 @@ func (es EpisodeService) Watch(userId uint, episodeId uint) (watched bool, err e
 		return false, nil
 	}
 
-	if err := db.DB.Model(&modelsdb.Episode{}).Where("id = ?", episodeId).Count(&count).Error; err != nil {
-		return false, err
-	}
-
-	if count == 0 {
+	var episode modelsdb.Episode
+	if err := db.DB.Preload("Season").First(&episode, episodeId).Error; err != nil {
 		return false, fmt.Errorf("episode not found: %d", episodeId)
 	}
 
@@ -41,6 +38,10 @@ func (es EpisodeService) Watch(userId uint, episodeId uint) (watched bool, err e
 	if err := db.DB.Create(&watchedEpisode).Error; err != nil {
 		return false, err
 	}
+
+	// mirror watched state back to TMDB (best-effort)
+	tmdbService := TmdbService{}
+	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, true)
 
 	return true, nil
 }
@@ -117,13 +118,26 @@ func (es EpisodeService) WatchPrevious(userId uint, episodeId uint) (episodesWat
 		return 0, err
 	}
 
+	// mirror the batch watch back to TMDB (best-effort)
+	tmdbService := TmdbService{}
+	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, true)
+
 	return len(previousEpisodes), nil
 }
 
 func (es EpisodeService) Unwatch(userId uint, episodeId uint) error {
+	var episode modelsdb.Episode
+	if err := db.DB.Preload("Season").First(&episode, episodeId).Error; err != nil {
+		return err
+	}
+
 	if err := db.DB.Where("user_id = ? AND episode_id = ?", userId, episodeId).Unscoped().Delete(&modelsdb.WatchedEpisode{}).Error; err != nil {
 		return err
 	}
+
+	// mirror unwatch back to TMDB (best-effort)
+	tmdbService := TmdbService{}
+	tmdbService.SyncWatchedToTmdb(userId, episode.Season.ShowID, false)
 
 	return nil
 }
