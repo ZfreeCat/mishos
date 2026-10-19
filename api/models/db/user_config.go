@@ -15,5 +15,7 @@ type UserConfig struct {
 	TmdbUsername    string
 	TmdbSyncEnabled bool
 	TmdbLastSyncAt  *time.Time
-	UserID          uint
+	// iCalendar subscription token (Apple Calendar / any CalDAV client)
+	CalendarToken string
+	UserID        uint
 }

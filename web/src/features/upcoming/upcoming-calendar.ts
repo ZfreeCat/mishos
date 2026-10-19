@@ -8,7 +8,6 @@ import { repeat } from 'lit/directives/repeat.js';
 import type { WatchlistEpisodeDto } from '@/types';
 
 import '@shoelace-style/shoelace/dist/components/button/button.js';
-import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 
 @customElement('upcoming-calendar')
 export class UpcomingCalendar extends LitElement {
@@ -24,13 +23,9 @@ export class UpcomingCalendar extends LitElement {
     return html`
       <div class="calendar">
         <div class="calendar-header">
-          <sl-button size="small" variant="neutral" @click=${this.prevMonth} aria-label="Previous month">
-            <sl-icon name="chevron-left"></sl-icon>
-          </sl-button>
+          <sl-button size="small" variant="neutral" @click=${this.prevMonth} aria-label="Previous month">‹</sl-button>
           <div class="calendar-title">${monthStart.format('MMMM YYYY')}</div>
-          <sl-button size="small" variant="neutral" @click=${this.nextMonth} aria-label="Next month">
-            <sl-icon name="chevron-right"></sl-icon>
-          </sl-button>
+          <sl-button size="small" variant="neutral" @click=${this.nextMonth} aria-label="Next month">›</sl-button>
         </div>
         <div class="calendar-grid">
           ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => html`<div class="weekday">${day}</div>`)}
@@ -109,6 +104,12 @@ export class UpcomingCalendar extends LitElement {
       align-items: center;
       justify-content: space-between;
       gap: var(--sl-spacing-small);
+    }
+
+    .calendar-header sl-button {
+      font-size: var(--sl-font-size-x-large);
+      font-weight: var(--sl-font-weight-semibold);
+      line-height: 1;
     }
 
     .calendar-title {

@@ -97,6 +97,19 @@ type TmdbWatchlistItem struct {
 	VoteAverage  float64 `json:"voteAverage"`
 }
 
+// TmdbRatedItem mirrors one entry of the user's TMDB rated list ("My Ratings").
+type TmdbRatedItem struct {
+	ID           int     `json:"id"`
+	MediaType    string  `json:"mediaType"`
+	Name         string  `json:"name"`
+	Overview     string  `json:"overview"`
+	PosterPath   string  `json:"posterPath"`
+	FirstAirDate string  `json:"firstAirDate"`
+	ReleaseDate  string  `json:"releaseDate"`
+	VoteAverage  float64 `json:"voteAverage"`
+	Rating       float64 `json:"rating"`
+}
+
 type TmdbClient struct{}
 
 // TmdbImageUrl builds a full image URL from a TMDB image path.
@@ -218,6 +231,43 @@ func (tc TmdbClient) GetWatchlist(accountId string, sessionId string, mediaType 
 			FirstAirDate: value.Get("first_air_date").String(),
 			ReleaseDate:  value.Get("release_date").String(),
 			VoteAverage:  value.Get("vote_average").Float(),
+		})
+		return true
+	})
+
+	return results, nil
+}
+
+// GetRated loads the user's rated movies or tv shows (My Ratings).
+func (tc TmdbClient) GetRated(accountId string, sessionId string, mediaType string) ([]TmdbRatedItem, error) {
+	params := url.Values{}
+	params.Add("session_id", sessionId)
+	params.Add("sort_by", "created_at.asc")
+
+	body, err := tc.get(fmt.Sprintf("account/%s/rated/%s", accountId, mediaType), &params)
+	if err != nil {
+		return nil, err
+	}
+
+	results := []TmdbRatedItem{}
+	json := gjson.Parse(body)
+
+	json.Get("results").ForEach(func(_, value gjson.Result) bool {
+		name := value.Get("name").String()
+		if name == "" {
+			name = value.Get("title").String()
+		}
+
+		results = append(results, TmdbRatedItem{
+			ID:           int(value.Get("id").Int()),
+			MediaType:    mediaType,
+			Name:         name,
+			Overview:     value.Get("overview").String(),
+			PosterPath:   value.Get("poster_path").String(),
+			FirstAirDate: value.Get("first_air_date").String(),
+			ReleaseDate:  value.Get("release_date").String(),
+			VoteAverage:  value.Get("vote_average").Float(),
+			Rating:       value.Get("rating").Float(),
 		})
 		return true
 	})

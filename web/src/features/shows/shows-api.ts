@@ -1,9 +1,14 @@
 import { kyWrapper } from '@/lib/ky-wrapper';
-import type { FollowShowResponseDto, ShowDto } from '@/types';
+import type { FollowShowResponseDto, RatingDto, ShowDto } from '@/types';
 
 export const getFollowedShows = async (): Promise<ShowDto[]> => {
   const response: any = await kyWrapper.get('show/followed').json();
   return response ? response.followedShows : [];
+};
+
+export const getMyRatings = async (mediaType: 'all' | 'tv' | 'movie' = 'all'): Promise<RatingDto[]> => {
+  const response: any = await kyWrapper.get(`tmdb/ratings?mediaType=${mediaType}`).json();
+  return response ? response.results : [];
 };
 
 export const getShowDetails = async (showId: string): Promise<ShowDto | undefined> => {

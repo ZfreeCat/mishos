@@ -103,10 +103,29 @@ func (tc TmdbController) Status(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, gin.H{
-		"connected": connected,
-		"username":  username,
+		"connected":  connected,
+		"username":   username,
 		"lastSyncAt": lastSyncAt,
 	})
+}
+
+// Ratings returns the user's TMDB rated entries (My Ratings).
+// mediaType query param: all | tv | movie (default all).
+func (tc TmdbController) Ratings(context *gin.Context) {
+	user, err := services.GetUserFromContext(context)
+	if err != nil {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, modelsdto.ErrorDto{Error: err.Error()})
+		return
+	}
+
+	mediaType := context.Query("mediaType")
+	results, err := tmdbService.GetMyRatings(user.ID, mediaType)
+	if err != nil {
+		services.SendError(context, err.Error())
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H{"results": results})
 }
 
 // Recommendations returns new-release recommendations (upcoming/new/trending).

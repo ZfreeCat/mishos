@@ -1,6 +1,6 @@
 import { Router } from '@vaadin/router';
 import { type TemplateResult, css, html, nothing } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { when } from 'lit/directives/when.js';
 
@@ -22,17 +22,19 @@ import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 @customElement('watchlist-unwatched')
 export class WatchListUnwatched extends BaseElement {
   @state() episodes?: WatchlistEpisodeDto[];
+  @property({ type: String }) mediaType: 'all' | 'tv' | 'movie' = 'all';
 
   render() {
     const hideSpoilers = this.appStore?.initData?.userConfig?.hideSpoilers;
+    const visibleEpisodes = this.getVisibleEpisodes();
 
     return html`
       ${
-        this.episodes
-          ? this.episodes.length > 0
+        visibleEpisodes
+          ? visibleEpisodes.length > 0
             ? html`
               <ul class="episode-list">
-                ${this.episodes.map(episode => {
+                ${visibleEpisodes.map(episode => {
                   return html`<li>${this.renderEpisode(episode, hideSpoilers)}</li>`;
                 })}
               </ul>
@@ -41,6 +43,12 @@ export class WatchListUnwatched extends BaseElement {
           : null
       }
     `;
+  }
+
+  private getVisibleEpisodes(): WatchlistEpisodeDto[] | undefined {
+    if (!this.episodes) return undefined;
+    if (this.mediaType === 'all') return this.episodes;
+    return this.episodes.filter(episode => episode.showMediaType === this.mediaType);
   }
 
   private renderEpisode(episode: WatchlistEpisodeDto, hideSpoilers = false): TemplateResult | null {

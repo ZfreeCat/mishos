@@ -2,7 +2,7 @@ import { Router } from '@vaadin/router';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { type TemplateResult, css, html } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 
 import { BaseElement } from '@/components/base-element';
 import { watchEpisode } from '@/features/shows/shows-api';
@@ -23,15 +23,18 @@ dayjs.extend(relativeTime);
 @customElement('watchlist-recent')
 export class WatchListRecent extends BaseElement {
   @state() episodes?: WatchlistEpisodeDto[];
+  @property({ type: String }) mediaType: 'all' | 'tv' | 'movie' = 'all';
 
   render() {
+    const visibleEpisodes = this.getVisibleEpisodes();
+
     return html`
       ${
-        this.episodes
-          ? this.episodes.length > 0
+        visibleEpisodes
+          ? visibleEpisodes.length > 0
             ? html`
               <ul class="episode-list">
-                ${this.episodes.map(episode => {
+                ${visibleEpisodes.map(episode => {
                   return html`<li>${this.renderEpisode(episode)}</li>`;
                 })}
               </ul>
@@ -40,6 +43,12 @@ export class WatchListRecent extends BaseElement {
           : null
       }
     `;
+  }
+
+  private getVisibleEpisodes(): WatchlistEpisodeDto[] | undefined {
+    if (!this.episodes) return undefined;
+    if (this.mediaType === 'all') return this.episodes;
+    return this.episodes.filter(episode => episode.showMediaType === this.mediaType);
   }
 
   private renderEpisode(episode: WatchlistEpisodeDto): TemplateResult | null {

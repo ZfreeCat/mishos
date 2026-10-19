@@ -18,6 +18,7 @@ func AddTmdbRoutes(router *gin.Engine) {
 		authRoutes.POST("/sync", tmdbController.Sync)
 		authRoutes.POST("/follow", tmdbController.FollowRecommendation)
 		authRoutes.GET("/status", tmdbController.Status)
+		authRoutes.GET("/ratings", tmdbController.Ratings)
 	}
 
 	authRoutes = router.Group("/api/recommendations", middlewares.AuthRequired())

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"sort"
 	"strconv"
 	"time"
 
@@ -364,6 +365,73 @@ func (ts TmdbService) GetRecommendations(userId uint, category string) ([]models
 			Followed:    followed,
 		})
 	}
+
+	return results, nil
+}
+
+// GetMyRatings returns the user's TMDB rated entries (My Ratings).
+// mediaType: all | tv | movie (default all = tv + movie merged).
+func (ts TmdbService) GetMyRatings(userId uint, mediaType string) ([]modelsdto.RatingDto, error) {
+	var user modelsdb.User
+	if err := db.DB.Preload("UserConfig").First(&user, userId).Error; err != nil {
+		return nil, err
+	}
+
+	cfg := user.UserConfig
+	if cfg.ID == 0 || cfg.TmdbSessionId == "" || cfg.TmdbAccountId == "" {
+		return nil, errTmdbNotConnected
+	}
+
+	client := tvproviders.TmdbClient{}
+	results := []modelsdto.RatingDto{}
+
+	types := []string{}
+	switch mediaType {
+	case tvproviders.TmdbMediaTypeMovie:
+		types = []string{tvproviders.TmdbMediaTypeMovie}
+	case tvproviders.TmdbMediaTypeTv:
+		types = []string{tvproviders.TmdbMediaTypeTv}
+	default:
+		types = []string{tvproviders.TmdbMediaTypeMovie, tvproviders.TmdbMediaTypeTv}
+	}
+
+	for _, mt := range types {
+		items, err := client.GetRated(cfg.TmdbAccountId, cfg.TmdbSessionId, mt)
+		if err != nil {
+			log.Error().Err(err).Msgf("error loading tmdb %s ratings", mt)
+			continue
+		}
+
+		for _, item := range items {
+			posterUrl := client.TmdbImageUrl(item.PosterPath, tvproviders.TmdbImageSizeW342)
+
+			date := item.FirstAirDate
+			if date == "" {
+				date = item.ReleaseDate
+			}
+
+			showId, followed := ts.getShowFollowState(userId, item.ID)
+
+			results = append(results, modelsdto.RatingDto{
+				TmdbId:      item.ID,
+				MediaType:   item.MediaType,
+				Name:        item.Name,
+				Overview:    item.Overview,
+				PosterUrl:   RewriteImageUrl(posterUrl),
+				Date:        date,
+				VoteAverage: item.VoteAverage,
+				Rating:      item.Rating,
+				ShowId:      showId,
+				Followed:    followed,
+			})
+		}
+	}
+
+	// stable order: tv first then movies within the "all" view is fine,
+	// but sort by name so the merged list reads predictably.
+	sort.SliceStable(results, func(i, j int) bool {
+		return results[i].Name < results[j].Name
+	})
 
 	return results, nil
 }

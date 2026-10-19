@@ -21,7 +21,7 @@ import './upcoming-calendar';
 @customElement('upcoming-page')
 export class UpcomingPage extends BaseElement {
   @state() episodes?: WatchlistEpisodeDto[];
-  @state() view: 'list' | 'calendar' = 'list';
+  @state() view: 'list' | 'calendar' = 'calendar';
 
   render() {
     const hideSpoilers = this.appStore?.initData?.userConfig?.hideSpoilers;

@@ -3,9 +3,10 @@ import { LitElement, type PropertyValues, css, html } from 'lit';
 import { customElement, property, query, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 
+import { downloadShowCalendar } from '@/features/settings/calendar-api';
 import { sharedStyles } from '@/styles/shared-styles';
 import type { ShowDto } from '@/types';
-import { createEvent, formatDate } from '@/utils';
+import { createEvent, createToastEvent, formatDate } from '@/utils';
 
 import '@shoelace-style/shoelace/dist/components/button/button.js';
 import '@shoelace-style/shoelace/dist/components/icon/icon.js';
@@ -62,6 +63,7 @@ export class ShowDetails extends LitElement {
                     Remove
                   </sl-button>
                   <sl-button size="small" class="refresh-button" @click=${this.handleClickRefresh}>Refresh</sl-button>
+                  <sl-button size="small" @click=${this.handleClickCalendar}>Add to Calendar</sl-button>
                 </div>
               `
               : html`
@@ -166,6 +168,28 @@ export class ShowDetails extends LitElement {
   private handleClickRefresh() {
     if (this.show) {
       this.dispatchEvent(createEvent('refresh-show', this.show?.id));
+    }
+  }
+
+  private async handleClickCalendar() {
+    if (!this.show?.id) return;
+
+    const safeName = (this.show.name ?? 'show').replace(/[\\/:*?"<>|]/g, '_');
+    try {
+      await downloadShowCalendar(this.show.id, `${safeName}.ics`);
+      this.dispatchEvent(
+        createToastEvent({
+          variant: 'success',
+          message: 'Calendar file downloaded - open it with Apple Calendar to add reminders',
+        })
+      );
+    } catch {
+      this.dispatchEvent(
+        createToastEvent({
+          variant: 'danger',
+          message: 'Could not generate the calendar file',
+        })
+      );
     }
   }
 

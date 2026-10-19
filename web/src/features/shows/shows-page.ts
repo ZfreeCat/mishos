@@ -5,10 +5,11 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 
 import { BaseElement } from '@/components/base-element';
 import { sharedStyles } from '@/styles/shared-styles';
-import type { FollowedShowDto, ShowCardBadge } from '@/types';
+import type { RatingDto, ShowCardBadge } from '@/types';
 
-import { getFollowedShows } from './shows-api';
+import { getMyRatings } from './shows-api';
 
+import '@/components/header-button';
 import '@/layout/app-layout';
 
 import './show-card';
@@ -17,54 +18,108 @@ import './shows-search-form';
 @customElement('shows-page')
 export class ShowsPage extends BaseElement {
   @state() loading = false;
-  @state() shows?: FollowedShowDto[];
+  @state() ratings?: RatingDto[];
+  @state() mediaType: 'all' | 'tv' | 'movie' = 'all';
 
-  private endedBadge: ShowCardBadge = { variant: 'primary', label: 'Ended' };
+  private ratingBadge: ShowCardBadge = { variant: 'primary', label: 'My Rating' };
 
   render() {
     return html`
       <app-layout icon="tv" headerTitle="Shows" selected="shows">
         <shows-search-form slot="header"></shows-search-form>
+        <ul class="view-tabs" slot="header">
+          <li>
+            <header-button
+              ?active=${this.mediaType === 'all'}
+              @click=${() => {
+                this.mediaType = 'all';
+              }}
+            >
+              All
+            </header-button>
+          </li>
+          <li>
+            <header-button
+              ?active=${this.mediaType === 'tv'}
+              @click=${() => {
+                this.mediaType = 'tv';
+              }}
+            >
+              TV
+            </header-button>
+          </li>
+          <li>
+            <header-button
+              ?active=${this.mediaType === 'movie'}
+              @click=${() => {
+                this.mediaType = 'movie';
+              }}
+            >
+              Movies
+            </header-button>
+          </li>
+        </ul>
         <section class="content">
           ${
-            this.shows && this.shows.length > 0
-              ? this.shows.map(
-                  show => html`
-                  <a href="#" class="card-link" @click=${(event: Event) => this.handleSelectShow(event, show)}>
+            this.ratings && this.ratings.length > 0
+              ? this.ratings.map(
+                  rating => html`
+                  <a href="#" class="card-link" @click=${(event: Event) => this.handleSelectShow(event, rating)}>
                     <show-card
-                      image=${ifDefined(show.imageMedium)}
-                      name=${ifDefined(show.name)}
-                      network=${ifDefined(show.network)}
-                      .badge=${show.status === 'Ended' ? this.endedBadge : undefined}
+                      image=${ifDefined(rating.posterUrl)}
+                      name=${ifDefined(rating.name)}
+                      network=${ifDefined(this.getSubtitle(rating))}
+                      .badge=${this.getBadge(rating)}
                     ></show-card>
                   </a>
                 `
                 )
-              : this.renderEmptyShows()
+              : this.renderEmpty()
           }
         </section>
       </app-layout>
     `;
   }
 
-  private renderEmptyShows() {
-    return !this.loading
-      ? html`<div>You are not following any shows. Use the search to find your favorite shows!</div>`
-      : null;
+  private getSubtitle(rating: RatingDto): string | undefined {
+    if (rating.mediaType === 'movie') return 'Movie';
+    return rating.date || undefined;
   }
 
-  private handleSelectShow(event: Event, show: FollowedShowDto) {
+  private getBadge(rating: RatingDto): ShowCardBadge {
+    return { ...this.ratingBadge, label: `★ ${rating.rating.toFixed(1)}` };
+  }
+
+  private renderEmpty() {
+    if (this.loading) return null;
+    return html`<div>No ratings found. Connect your TMDB account in Settings, then rate movies and shows on TMDB.</div>`;
+  }
+
+  private handleSelectShow(event: Event, rating: RatingDto) {
     event.preventDefault();
-    if (show && this.shows) {
-      Router.go(`/show/view/${show.showId}`);
+    if (rating.showId) {
+      Router.go(`/show/view/${rating.showId}`);
+      return;
     }
+    this.toast({ variant: 'neutral', message: `${rating.name} is not in your Mishos library yet` });
   }
 
   async connectedCallback() {
     super.connectedCallback();
+    await this.loadRatings();
+  }
+
+  private async loadRatings() {
     this.loading = true;
-    this.shows = await this.callApi(() => getFollowedShows());
+    this.ratings = await this.callApi(() => getMyRatings(this.mediaType));
     this.loading = false;
+  }
+
+  updated(changedProperties: Map<string, unknown>) {
+    super.updated?.(changedProperties);
+    if (changedProperties.has('mediaType')) {
+      void this.loadRatings();
+    }
   }
 
   static styles = [
@@ -76,6 +131,14 @@ export class ShowsPage extends BaseElement {
         flex-wrap: wrap;
         gap: var(--sl-spacing-medium);
         margin: var(--sl-spacing-large);
+      }
+
+      .view-tabs {
+        display: flex;
+        gap: var(--sl-spacing-2x-small);
+        list-style: none;
+        margin: 0;
+        padding: 0;
       }
     `,
   ];

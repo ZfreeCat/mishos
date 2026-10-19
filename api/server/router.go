@@ -18,6 +18,7 @@ func CreateRouter() *gin.Engine {
 	routes.AddSettingsRoutes(router)
 	routes.AddAdminRoutes(router)
 	routes.AddTmdbRoutes(router)
+	routes.AddCalendarRoutes(router)
 
 	return router
 }
