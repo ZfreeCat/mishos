@@ -37,7 +37,8 @@ func (cs CalendarService) GetOrCreateToken(userId uint) (string, error) {
 
 	cfg := user.UserConfig
 	if cfg.ID == 0 {
-		return "", errTmdbConfigMissing
+		// calendar is independent of TMDB - create the config row on demand
+		cfg = modelsdb.UserConfig{UserID: user.ID}
 	}
 
 	if cfg.CalendarToken != "" {

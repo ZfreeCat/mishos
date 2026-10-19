@@ -59,9 +59,10 @@ export class SettingsCalendar extends BaseElement {
 
   private async loadToken() {
     const token = await this.callApi<string>(() => getCalendarToken());
+    // always stop the spinner, even on failure, so the user can retry
+    this.tokenLoaded = true;
     if (token) {
       this.token = token;
-      this.tokenLoaded = true;
     }
   }
 
