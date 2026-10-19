@@ -124,19 +124,24 @@ func (ts TmdbService) GetTmdbStatus(userId uint) (connected bool, username strin
 // ---------- Watchlist sync ----------
 
 // SyncWatchlist pulls the user's TMDB watchlist (movies + tv) and makes sure
-// every entry exists as a followed show in Mishos.
-func (ts TmdbService) SyncWatchlist(userId uint) (added int, followed int, err error) {
+// every entry exists as a followed show in Mishos. It also performs the
+// reverse direction: local TMDB shows that are no longer on the TMDB
+// watchlist are unfollowed (two-way sync).
+func (ts TmdbService) SyncWatchlist(userId uint) (added int, followed int, removed int, err error) {
 	var user modelsdb.User
 	if err := db.DB.Preload("UserConfig").First(&user, userId).Error; err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	cfg := user.UserConfig
 	if cfg.ID == 0 || cfg.TmdbSessionId == "" || cfg.TmdbAccountId == "" {
-		return 0, 0, errTmdbNotConnected
+		return 0, 0, 0, errTmdbNotConnected
 	}
 
 	client := tvproviders.TmdbClient{}
+
+	// provider ids (as strings) currently present on the TMDB watchlist
+	tmdbWatchlist := map[string]bool{}
 
 	for _, mediaType := range []string{tvproviders.TmdbMediaTypeMovie, tvproviders.TmdbMediaTypeTv} {
 		items, err := client.GetWatchlist(cfg.TmdbAccountId, cfg.TmdbSessionId, mediaType)
@@ -146,6 +151,8 @@ func (ts TmdbService) SyncWatchlist(userId uint) (added int, followed int, err e
 		}
 
 		for _, item := range items {
+			tmdbWatchlist[strconv.Itoa(item.ID)] = true
+
 			addedCount, followedCount, err := ts.ensureShowFollowed(userId, item.ID, item.MediaType)
 			if err != nil {
 				log.Error().Err(err).Msgf("error syncing tmdb watchlist item: %s (%d)", item.Name, item.ID)
@@ -157,13 +164,79 @@ func (ts TmdbService) SyncWatchlist(userId uint) (added int, followed int, err e
 		}
 	}
 
+	// two-way sync: unfollow local TMDB shows that are no longer on the TMDB watchlist
+	var localTmdbFollows []struct {
+		ShowID uint
+	}
+	if err := db.DB.
+		Model(&modelsdb.FollowedShow{}).
+		Select("followed_shows.show_id as ShowID").
+		Joins("inner join shows on shows.id = followed_shows.show_id").
+		Where("followed_shows.user_id = ? AND shows.provider_type = ?", userId, TmdbProviderType).
+		Scan(&localTmdbFollows).Error; err != nil {
+		log.Error().Err(err).Msg("error loading local tmdb follows for removal sync")
+	}
+
+	showService := ShowService{}
+	for _, local := range localTmdbFollows {
+		var show modelsdb.Show
+		if err := db.DB.First(&show, local.ShowID).Error; err != nil {
+			continue
+		}
+		if show.ProviderID == nil {
+			continue
+		}
+
+		if !tmdbWatchlist[*show.ProviderID] {
+			if err := showService.Unfollow(userId, show.ID); err != nil {
+				log.Error().Err(err).Msgf("error unfollowing show %d no longer on tmdb watchlist", show.ID)
+				continue
+			}
+			removed++
+		}
+	}
+
 	now := time.Now()
 	cfg.TmdbLastSyncAt = &now
 	if err := db.DB.Save(cfg).Error; err != nil {
-		return added, followed, err
+		return added, followed, removed, err
 	}
 
-	return added, followed, nil
+	return added, followed, removed, nil
+}
+
+// SyncFollowToTmdb writes a local follow/unfollow back to the user's TMDB
+// watchlist (two-way sync). Best-effort: remote failures are logged and never
+// fail the local operation.
+func (ts TmdbService) SyncFollowToTmdb(userId uint, showId uint, follow bool) {
+	var user modelsdb.User
+	if err := db.DB.Preload("UserConfig").First(&user, userId).Error; err != nil {
+		return
+	}
+
+	cfg := user.UserConfig
+	if cfg.ID == 0 || cfg.TmdbSessionId == "" || cfg.TmdbAccountId == "" {
+		return
+	}
+
+	var show modelsdb.Show
+	if err := db.DB.First(&show, showId).Error; err != nil {
+		return
+	}
+	if show.ProviderType != TmdbProviderType || show.ProviderID == nil {
+		return
+	}
+
+	mediaId, err := strconv.Atoi(*show.ProviderID)
+	if err != nil {
+		log.Error().Err(err).Msgf("tmdb: invalid provider id for show %d", showId)
+		return
+	}
+
+	client := tvproviders.TmdbClient{}
+	if err := client.SetWatchlistItem(cfg.TmdbAccountId, cfg.TmdbSessionId, show.MediaType, mediaId, follow); err != nil {
+		log.Error().Err(err).Msgf("tmdb: error writing watchlist for user %d show %d (follow=%t)", userId, showId, follow)
+	}
 }
 
 // ensureShowFollowed creates the show from TMDB if missing and follows it.

@@ -79,13 +79,13 @@ func (tc TmdbController) Sync(context *gin.Context) {
 		return
 	}
 
-	added, followed, err := tmdbService.SyncWatchlist(user.ID)
+	added, followed, removed, err := tmdbService.SyncWatchlist(user.ID)
 	if err != nil {
 		services.SendError(context, err.Error())
 		return
 	}
 
-	context.JSON(http.StatusOK, gin.H{"added": added, "followed": followed})
+	context.JSON(http.StatusOK, gin.H{"added": added, "followed": followed, "removed": removed})
 }
 
 // Status returns the TMDB binding status.

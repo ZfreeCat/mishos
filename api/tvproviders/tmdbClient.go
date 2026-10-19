@@ -1,6 +1,8 @@
 package tvproviders
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -221,6 +223,47 @@ func (tc TmdbClient) GetWatchlist(accountId string, sessionId string, mediaType 
 	})
 
 	return results, nil
+}
+
+// SetWatchlistItem adds (onWatchlist=true) or removes (onWatchlist=false) a
+// movie/tv entry to/from the user's TMDB watchlist. Used by the two-way sync.
+func (tc TmdbClient) SetWatchlistItem(accountId string, sessionId string, mediaType string, mediaId int, onWatchlist bool) error {
+	key, err := TmdbApiKey()
+	if err != nil {
+		return err
+	}
+
+	base := TmdbApiBase()
+	apiURL := fmt.Sprintf("%s/account/%s/watchlist?api_key=%s&session_id=%s", base, accountId, url.QueryEscape(key), url.QueryEscape(sessionId))
+
+	payload, err := json.Marshal(map[string]any{
+		"media_type": mediaType,
+		"media_id":   mediaId,
+		"watchlist":  onWatchlist,
+	})
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest("POST", apiURL, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := tmdbHTTPClient.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(response.Body)
+		statusMessage := gjson.Get(string(bodyBytes), "status_message").String()
+		return fmt.Errorf("tmdb: received error from provider with code %d: %s", response.StatusCode, statusMessage)
+	}
+
+	return nil
 }
 
 // GetTrending loads trending movies or tv shows for a time window (day|week).

@@ -28,8 +28,9 @@ export class SettingsTmdb extends BaseElement {
       <section class="tmdb-section">
         <h3>TMDB</h3>
         <p class="help">
-          Connect your TMDB account to sync your watchlist into Mishos. New movies and shows on your TMDB
-          watchlist are added as followed shows automatically.
+          Connect your TMDB account for two-way watchlist sync: entries on your TMDB watchlist are
+          followed here automatically, and follows/unfollows in Mishos are written back to your TMDB
+          watchlist. Entries removed from TMDB are unfollowed here on the next sync.
         </p>
 
         ${when(
@@ -94,13 +95,15 @@ export class SettingsTmdb extends BaseElement {
 
   private async handleSync() {
     this.syncing = true;
-    const response = await this.callApi<{ added?: number; followed?: number }>(() => syncTmdbWatchlist());
+    const response = await this.callApi<{ added?: number; followed?: number; removed?: number }>(() =>
+      syncTmdbWatchlist()
+    );
     this.syncing = false;
 
     if (response) {
       this.toast({
         variant: 'success',
-        message: `Watchlist synced: ${response.added ?? 0} added, ${response.followed ?? 0} followed`,
+        message: `Watchlist synced: ${response.added ?? 0} added, ${response.followed ?? 0} followed, ${response.removed ?? 0} removed`,
       });
       await this.loadStatus();
     }

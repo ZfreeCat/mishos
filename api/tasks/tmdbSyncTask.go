@@ -43,13 +43,13 @@ func (tst TmdbSyncTask) RunTmdbSync() {
 	}
 
 	for _, config := range configs {
-		added, followed, err := tmdbService.SyncWatchlist(config.UserID)
+		added, followed, removed, err := tmdbService.SyncWatchlist(config.UserID)
 		if err != nil {
 			log.Error().Err(err).Msgf("error syncing tmdb watchlist for user %d", config.UserID)
 			continue
 		}
 
-		log.Info().Msgf("tmdb watchlist synced for user %d: added=%d followed=%d", config.UserID, added, followed)
+		log.Info().Msgf("tmdb watchlist synced for user %d: added=%d followed=%d removed=%d", config.UserID, added, followed, removed)
 	}
 }
 

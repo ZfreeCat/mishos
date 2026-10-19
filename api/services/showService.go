@@ -79,6 +79,10 @@ func (showService ShowService) Follow(userId uint, showId uint) error {
 		}
 
 		apphooks.OnFollow.Dispatch(payload)
+
+		// two-way sync: write the follow back to the user's TMDB watchlist
+		tmdbService := TmdbService{}
+		tmdbService.SyncFollowToTmdb(userId, showId, true)
 	}
 
 	return nil
@@ -103,6 +107,10 @@ func (showService ShowService) Unfollow(userId uint, showId uint) error {
 		}
 
 		apphooks.OnUnfollow.Dispatch(payload)
+
+		// two-way sync: remove the unfollowed show from the user's TMDB watchlist
+		tmdbService := TmdbService{}
+		tmdbService.SyncFollowToTmdb(userId, showId, false)
 	}
 
 	return nil
