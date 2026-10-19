@@ -48,7 +48,11 @@ export class WatchListUnwatched extends BaseElement {
   private getVisibleEpisodes(): WatchlistEpisodeDto[] | undefined {
     if (!this.episodes) return undefined;
     if (this.mediaType === 'all') return this.episodes;
-    return this.episodes.filter(episode => episode.showMediaType === this.mediaType);
+    if (this.mediaType === 'tv') {
+      // legacy TV entries have no showMediaType set - treat empty as TV
+      return this.episodes.filter(episode => episode.showMediaType === 'tv' || !episode.showMediaType);
+    }
+    return this.episodes.filter(episode => episode.showMediaType === 'movie');
   }
 
   private renderEpisode(episode: WatchlistEpisodeDto, hideSpoilers = false): TemplateResult | null {
